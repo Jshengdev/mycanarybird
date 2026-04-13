@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && cd canary-dashboard && npm install && npm run build && cp -r out ../dist/demo",
     "lint": "eslint .",
     "preview": "vite preview"
   },
