@@ -1,5 +1,9 @@
 {
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
-    { "source": "/((?!demo).*)", "destination": "/index.html" }
+    { "source": "/demo", "destination": "/demo/index.html" },
+    { "source": "/demo/:path*", "destination": "/demo/:path*" },
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
