@@ -4,7 +4,7 @@
 
 The marketing landing page for **Canary**, a QA/observability SDK for computer-use AI agents (Claude Code, Browser Use, openClaw, Hermes).
 
-- **Stack**: Next.js 16 App Router · React 18 · Framer Motion · GSAP (Reel only) · CSS Modules · next/font
+- **Stack**: Next.js 16 App Router · React 18 · Framer Motion · CSS Modules · next/font
 - **Live**: https://mycanarybird.com (Vercel, project `mycanarybird`, repo root)
 - **Local dev**: `npm run dev` → http://localhost:3000
 - **Prod deploy**: `vercel --prod --yes` from repo root
@@ -17,7 +17,7 @@ The page is already shipped and working. **We are now in polish phase** — no s
 src/
   app/
     layout.tsx          — root layout, CanaryWatchProvider wraps everything
-    page.tsx            — home composition (Nav, Hero, EcosystemBar, Reel, UseCases, Closer, SessionLog, Footer)
+    page.tsx            — home composition (Nav, Hero, EcosystemBar, Flow, UseCases, Closer, ViewSource, SessionLog, Footer)
     about/ blog/ features/ api/early-access/
     globals.css         — design tokens (source of truth below)
   components/
@@ -25,10 +25,12 @@ src/
     landing/
       Hero.tsx            — asymmetric hero, LIVE badge, blinking cursor, ascii grid
       EcosystemBar.tsx
-      Reel/               — GSAP pinned 300vh, frames Observe/Control/Improve
+      Flow/               — Observe/Control/Improve narrative
       UseCases/           — 4-tab selector with layoutId morph
       Closer.tsx          — "agents in the mine" headline + EarlyAccessForm
+      ViewSource/         — source-access CTA
     canary-watch/       — the mascot system (context, mascot, session log, hooks)
+    footer/             — Footer
     ui/                 — Button, LiveIndicator, AsciiHover
 ```
 
@@ -63,12 +65,10 @@ The bird is meta-commentary on the product itself — it watches you read the pa
 Eye-path perch chain (in order):
 
 1. Hero headline — "The trust layer for autonomous agents."
-2. Reel · Observe → session header (`SESSION · 2026-04-15 · 14:23:07`)
-3. Reel · Control → the red `● BLOCKED · OUTREACH SEND` stripe
-4. Reel · Improve → first suggested rule card (`rate-limit-domain-sends`)
-5. UseCases → active tab (2.2s) → drifts to `[data-uc-visual]` visual box
-6. Closer → the "Get early access →" submit button
-7. SessionLog → "Caught you." headline
+2. Flow → Observe/Control/Improve anchors
+3. UseCases → active tab (2.2s) → drifts to `[data-uc-visual]` visual box
+4. Closer → the "Get early access →" submit button
+5. SessionLog → "Caught you." headline
 
 Nav is **NOT** a perch — the logo isn't an eye-path stop.
 
@@ -92,7 +92,6 @@ We are running **three parallel polish tracks**. Each runs in its own tmux sessi
 
 - **Taste skill §7**: no Inter font, no pure `#000`, no outer glows, no sperm-like flow fields, no "3 equal cards" row, no "Elevate"/"Seamless"/"Next-Gen" copy, no 50%/99% round stat values.
 - **Animation**: `transform` and `opacity` only — never animate `top/left/width/height`.
-- **Reel tree**: must NEVER import `framer-motion` (GSAP territory). Nav/Hero/UseCases/Closer use framer.
 - **Client boundaries**: interactive sections need `'use client'`. RSC by default otherwise.
 - **React 18 ref types**: use `RefObject<T>` (not `RefObject<T | null>`), and `useRef<T>(null)`.
 - **Reduced motion**: every motion addition needs a `prefers-reduced-motion: reduce` fallback.
@@ -116,7 +115,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000/   # 200
 
 ## What's already been done (don't redo)
 
-- Full redesign: Nav (full→pill), Hero (asymmetric, LIVE, cursor), Reel (GSAP 3 frames), UseCases (4 tabs), Closer (form), placeholder routes
+- Full redesign: Nav (full→pill), Hero (asymmetric, LIVE, cursor), Flow (3 frames), UseCases (4 tabs), Closer (form), placeholder routes
 - Canary-watch meta-system wired end to end; perch chain; scroll stickiness (hysteresis + dwell + idle + wiggle)
 - Prod deploy working; `/demo` dashboard preserved via static export rewrite
 - Input tracking, attention score, session-log punchline

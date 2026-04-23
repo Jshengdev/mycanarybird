@@ -59,10 +59,8 @@ const SCROLL_IDLE_MS = 180;
 const TRAVEL_MS = 820;
 const WIGGLE_DURATION_MS = 1200;
 
-/** Bounce physics (flow-stop). */
-const BOUNCE_SPEED = 120; // px per second, constant magnitude
-/** Inset the cage boundaries by BIRD_SIZE so the bird fully stays inside. */
-// (No explicit constant — we use BIRD_SIZE directly below for clarity.)
+/** Bounce physics (flow-stop). px per second, constant magnitude. */
+const BOUNCE_SPEED = 120;
 
 /** Install cinematic timings. */
 const CINE_CURSOR_FLY_MS = 600;     // cursor flies in from offscreen right
@@ -700,14 +698,10 @@ export function CanaryMascot() {
   //   - .cinematicApex    = 500ms ease-out (rise to apex)
   //   - .cinematicLand    = 500ms ease-in (fall to panel)
   //   - .cinematicSettle  = 120ms ease-out (drop into panel)
-  const cinematicClass =
-    cinePhase === 'gliding-apex'
-      ? styles.cinematicApex
-      : cinePhase === 'gliding-land'
-        ? styles.cinematicLand
-        : cinePhase === 'installed'
-          ? styles.cinematicSettle
-          : '';
+  let cinematicClass = '';
+  if (cinePhase === 'gliding-apex') cinematicClass = styles.cinematicApex;
+  else if (cinePhase === 'gliding-land') cinematicClass = styles.cinematicLand;
+  else if (cinePhase === 'installed') cinematicClass = styles.cinematicSettle;
 
   const bouncing = activeSectionId === 'flow-stop' && !reduce && !birdHeldPos;
 

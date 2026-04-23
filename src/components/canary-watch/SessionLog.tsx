@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useCanaryWatch } from './context';
 import { useCanarySection } from './useCanarySection';
+import type { LogEventType } from './types';
 import styles from './SessionLog.module.css';
 
 function fmtElapsed(ms: number): string {
@@ -51,6 +52,14 @@ function computeAttentionScore(params: {
   const clamped = Math.max(0, Math.min(100, Math.round(raw)));
   return `${clamped}%`;
 }
+
+const EVENT_TYPE_CLASS: Record<LogEventType, string> = {
+  OBSERVED: 'typeObserved',
+  FLAGGED: 'typeFlagged',
+  BLOCKED: 'typeBlocked',
+  LEARNED: 'typeLearned',
+  SUGGESTED: 'typeSuggested',
+};
 
 /** Events that count as meaningful engagement (not scroll/key noise). */
 function isMeaningful(target: string): boolean {
@@ -178,25 +187,13 @@ export function SessionLog() {
                 No events yet. Scroll up.
               </li>
             ) : (
-              events.map((ev) => {
-                const typeCls =
-                  ev.type === 'OBSERVED'
-                    ? styles.typeObserved
-                    : ev.type === 'FLAGGED'
-                      ? styles.typeFlagged
-                      : ev.type === 'BLOCKED'
-                        ? styles.typeBlocked
-                        : ev.type === 'LEARNED'
-                          ? styles.typeLearned
-                          : styles.typeSuggested;
-                return (
-                  <li key={ev.id} className={styles.row}>
-                    <span className={styles.time}>{ev.time}</span>
-                    <span className={`${styles.type} ${typeCls}`}>{ev.type}</span>
-                    <span className={styles.target}>{ev.target}</span>
-                  </li>
-                );
-              })
+              events.map((ev) => (
+                <li key={ev.id} className={styles.row}>
+                  <span className={styles.time}>{ev.time}</span>
+                  <span className={`${styles.type} ${styles[EVENT_TYPE_CLASS[ev.type]]}`}>{ev.type}</span>
+                  <span className={styles.target}>{ev.target}</span>
+                </li>
+              ))
             )}
           </ul>
         </div>

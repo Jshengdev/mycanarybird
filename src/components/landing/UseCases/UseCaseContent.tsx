@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import type { UseCase } from './useCaseData';
+import type { UseCase, UseCaseRule } from './useCaseData';
 import { UseCaseVisual } from './UseCaseVisual';
 import { spring } from '@/lib/motion';
 import styles from './UseCases.module.css';
@@ -9,6 +9,12 @@ import styles from './UseCases.module.css';
 export interface UseCaseContentProps {
   useCase: UseCase;
 }
+
+const RULE_KIND_LABEL: Record<UseCaseRule['kind'], string> = {
+  block: 'BLOCK',
+  flag: 'FLAG',
+  allow: 'ALLOW',
+};
 
 export function UseCaseContent({ useCase }: UseCaseContentProps) {
   return (
@@ -42,9 +48,7 @@ export function UseCaseContent({ useCase }: UseCaseContentProps) {
             <ul className={styles.ruleList}>
               {useCase.rules.map((r, i) => (
                 <li key={i} className={`${styles.ruleRow} ${styles[`rule_${r.kind}`]}`}>
-                  <span className={styles.ruleKind}>
-                    {r.kind === 'block' ? 'BLOCK' : r.kind === 'flag' ? 'FLAG' : 'ALLOW'}
-                  </span>
+                  <span className={styles.ruleKind}>{RULE_KIND_LABEL[r.kind]}</span>
                   <span className={styles.ruleText}>{r.text}</span>
                 </li>
               ))}

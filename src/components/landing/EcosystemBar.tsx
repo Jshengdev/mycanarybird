@@ -8,7 +8,7 @@ const FRAMEWORKS = [
 ];
 
 /**
- * Ecosystem trust bar between hero and Reel.
+ * Ecosystem trust bar between hero and Flow.
  * Not a 3-column card row (taste-skill §7 ban). Horizontal list
  * with legitimacy stat below — openClaw downloads is the
  * hardest-to-fake credibility signal in the 2-second scan.

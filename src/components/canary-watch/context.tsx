@@ -210,33 +210,11 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
       if (!e.shiftKey) return;
       if (!(e.target instanceof HTMLElement)) return;
       const clicked = e.target;
-      // Find the deepest-registered section whose anchor contains this element.
+      // Winner: the section whose anchor contains `clicked` and has no
+      // other registered anchor nested inside it (i.e. the most specific).
       let winner: CanarySectionRegistration | null = null;
       for (const section of sectionsRef.current) {
-        if (section.anchor && section.anchor.contains(clicked)) {
-          if (
-            !winner ||
-            (winner.anchor && section.anchor.contains(winner.anchor))
-          ) {
-            // ignore — winner is more specific
-          } else if (
-            !winner ||
-            (winner.anchor && !winner.anchor.contains(section.anchor))
-          ) {
-            winner = section;
-          } else {
-            winner = section;
-          }
-        }
-      }
-      // Simpler re-scan: winner is the section whose anchor contains `clicked`
-      // AND has no other registered anchor nested inside it.
-      winner = null;
-      for (const section of sectionsRef.current) {
         if (!section.anchor?.contains(clicked)) continue;
-        // Is there any other section whose anchor is nested inside this one
-        // AND also contains the clicked element? If so, skip — that nested
-        // one is more specific.
         const hasMoreSpecific = sectionsRef.current.some(
           (other) =>
             other !== section &&
