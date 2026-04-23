@@ -1,47 +1,21 @@
 'use client';
 
 /**
- * CanaryMascot — the bird that "watches" you read the page.
+ * CanaryMascot — the bird that sits on the active section and flies to
+ * the next one when the reader scrolls past.
  *
- * Round B — scroll-driven, per-section behavior (replaces the time-based
- * focus-point cycle of earlier rounds).
+ * Model:
+ *   sit   — bird is fixed-positioned above the active section's perch
+ *           element. Re-reads the perch rect on scroll/resize so the bird
+ *           stays attached while the page scrolls beneath it.
+ *   fly   — on active-section change, rAF drives a parabolic arc from the
+ *           previous position to the new perch over FLIGHT_MS. After
+ *           landing, the bird returns to `sit` mode.
  *
- * Motion model, summarized per section:
- *   hero            → sits on top edge of the H1 headline bounding box.
- *   flow-install    → initial perch on the "01 · Install" numberRow. Then a
- *                     one-shot cinematic fires (cursor flies in from offscreen
- *                     right, morphs to a hand, grabs the bird, curves into
- *                     the Install visual panel). Post-cinematic the bird
- *                     stays inside the panel via `birdAnchorRef`.
- *   flow-see        → rides the playhead scrub inside SeeVisual; continuous
- *                     rAF tracks the playhead every frame.
- *   flow-stop       → bounces off the four walls of the [data-stop-cage].
- *                     Mini physics loop, trapped-bird feel.
- *   flow-learn      → perches on the "Add rule" button inside LearnVisual.
- *   use-cases       → perches on the active tab; moves on tab click.
- *   closer          → flies to the "Get early access →" submit button.
- *   view-source     → sits on the "View source code" headline.
- *   session-log     → sits on the "Caught you." headline.
+ * Reduced-motion: skip the arc, snap to new perch. No idle animations.
  *
- * Unified perch math (§"Perch math"): bird sits ON TOP of the perch's
- * bounding box (not above it). Horizontally centered on the rect, vertically
- * offset by BIRD_SIZE + OUTLINE_OFFSET so the body sits exactly on the
- * outline drawn by `.cw-perched`.
- *
- * Per-frame recalc: while a section is active and no cinematic/bounce is
- * overriding the position, a continuous rAF loop recomputes the bird's
- * position every frame. This keeps the bird glued to animating perches
- * (SeeVisual's playhead moves 60fps) without a separate scroll-based rAF.
- *
- * birdHeldPos (cursor-actor override) still works: during the install
- * cinematic the cinematic drives the bird's position directly, and the
- * per-frame recalc skips itself.
- *
- * Reduced-motion:
- *   - no continuous rAF (scroll-only recalc)
- *   - no install cinematic (bird just snaps to panel)
- *   - no bounce physics (bird just sits in the cage)
- *   - no transforms/transitions (snap positions)
+ * Shift+click (handled in context.tsx) lets you retarget the active
+ * section's perch at runtime — still supported.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -54,164 +28,78 @@ const BIRD_SIZE = 28;
 /** Matches `outline-offset` on `.cw-perched` — bird sits ON the outline. */
 const OUTLINE_OFFSET = 6;
 
-const SWITCH_HYSTERESIS_PX = 60;
-const SCROLL_IDLE_MS = 80;
-const WIGGLE_DURATION_MS = 1200;
-
-/** Flight duration clamp — short hops stay snappy, long flights stay readable. */
-const FLIGHT_MIN_MS = 400;
-const FLIGHT_MAX_MS = 900;
-/** Distance below which the bird just snaps — no flight, no arc. */
+/** Base flight duration; scaled down for short hops in startFlight. */
+const FLIGHT_MAX_MS = 700;
+const FLIGHT_MIN_MS = 360;
+/** Below this linear distance, bird just snaps — no arc. */
 const FLIGHT_SNAP_DISTANCE_PX = 24;
+/** Landing wiggle duration (CSS animation). */
+const WIGGLE_DURATION_MS = 1000;
 
 const easeInOutCubic = (t: number): number =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-/** Bounce physics (flow-stop). px per second, constant magnitude. */
-const BOUNCE_SPEED = 120;
-
-/** Install cinematic timings. */
-const CINE_CURSOR_FLY_MS = 600;     // cursor flies in from offscreen right
-const CINE_MORPH_MS = 200;          // cursor → hand cross-fade
-const CINE_GLIDE_APEX_MS = 500;     // first half of the curved glide (ease-out)
-const CINE_GLIDE_LAND_MS = 500;     // second half (ease-in)
-const CINE_DROP_MS = 120;           // settle into the panel
-const CINE_HAND_EXIT_MS = 500;      // hand flies back offscreen right
-
-/**
- * After the bird settles inside the Install panel post-cinematic, land it
- * a little inset from the top edge of the visualFrame so it reads as
- * "inside the panel," not "outlined on top of it."
- */
-const PANEL_INSET_X = 24;
-const PANEL_INSET_Y = 24;
-
-/**
- * Cascades narrate what Canary "observes" + "learns" when dropped into each
- * product step. Kept (Install-only now; see/stop/learn entries preserved for
- * future slots but unused by this round).
- */
-const DROP_CASCADES: Record<string, Array<{ delay: number; type: 'OBSERVED' | 'LEARNED' | 'SUGGESTED'; target: string }>> = {
-  install: [
-    { delay: 120, type: 'OBSERVED', target: 'Canary · canary init --watch · hooked' },
-    { delay: 900, type: 'LEARNED', target: 'Stack · claude-code, browser-use, openclaw, hermes' },
-    { delay: 1800, type: 'SUGGESTED', target: 'Rule · emit events to :7171 · no config' },
-  ],
-};
+/** Viewport coords where the bird sits ON TOP of `el`. */
+function perchPos(el: HTMLElement): { x: number; y: number } {
+  const r = el.getBoundingClientRect();
+  return {
+    x: r.left + r.width / 2 - BIRD_SIZE / 2,
+    y: r.top - BIRD_SIZE - OUTLINE_OFFSET,
+  };
+}
 
 export function CanaryMascot() {
-  const {
-    sections,
-    activeSectionId,
-    setActiveSection,
-    perchOverrides,
-    alertKey,
-    birdHeldPos,
-    setBirdHeldPos,
-    logEvent,
-  } = useCanaryWatch();
+  const { sections, activeSectionId, setActiveSection, perchOverrides, alertKey } =
+    useCanaryWatch();
   const reduce = useReducedMotion() === true;
 
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [flying, setFlying] = useState(false);
   const [facing, setFacing] = useState<'left' | 'right'>('right');
   const [wiggle, setWiggle] = useState(false);
 
-  /** Install cinematic phase — drives cursor visibility and bird class. */
-  const [cinePhase, setCinePhase] = useState<
-    'idle' | 'cursor-in' | 'morph' | 'gliding-apex' | 'gliding-land' | 'installed'
-  >('idle');
-  /** Cursor/hand absolute viewport position (separate from bird). */
-  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
-  /** Which SVG the phantom-pointer is showing right now. */
-  const [pointerVariant, setPointerVariant] = useState<'arrow' | 'hand'>('arrow');
-
-  /** Flying — true while the arc-path rAF driver owns the bird's position,
-   *  from the moment a new perch is committed until the bird lands. The
-   *  driver renders an ease-in-out arc (parabolic lift) instead of a
-   *  straight-line CSS tween, and tilts `.inner` toward the travel
-   *  direction for a flight pose. */
-  const [flying, setFlying] = useState(false);
-
-  /** Timer refs — all cleared on unmount to avoid orphaned setState calls. */
-  const cascadeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const cineTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firstPlacementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /**
-   * Arc-flight state. When non-null, the driver owns the bird's position
-   * (recalcPosition early-returns). A single rAF drives ease-in-out-cubic
-   * progress across a parabolic arc; amplitude scales with distance so
-   * short hops stay low and long flights visibly lift.
-   */
-  const flightRef = useRef<{
-    from: { x: number; y: number };
-    to: { x: number; y: number };
-    start: number;
-    duration: number;
-    amplitude: number;
-    raf: number;
-    perchEl: HTMLElement | null;
-  } | null>(null);
-
-  /** One-shot guards — each cinematic fires at most once per session. */
-  const demoPlayedRef = useRef(false);
-  const releasePlayedRef = useRef(false);
-
-  /** Mirror of `pos` for effects that shouldn't re-run on every position change. */
+  /** Element currently carrying the `.cw-perched` outline. */
+  const outlineElRef = useRef<HTMLElement | null>(null);
+  /** Mirror of `pos` for the flight driver's `from` capture. */
   const posRef = useRef<{ x: number; y: number } | null>(null);
+  /** Current flight's cancel handle. Non-null means the driver owns pos. */
+  const flightRafRef = useRef<number | null>(null);
+  /** Wiggle timer (cleared on unmount or re-fire). */
+  const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstPlaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /**
-   * Post-cinematic "stay here" anchor. When non-null, the per-frame recalc
-   * reads this element's rect and centers the bird INSIDE it instead of
-   * using the active section's perchAnchor. Set at the end of the install
-   * cinematic to the Install panel's visualFrame; cleared when the user
-   * scrolls away from flow-install.
-   */
-  const birdAnchorRef = useRef<HTMLElement | null>(null);
-  /** Triggers a re-render when birdAnchorRef changes so recalc picks it up. */
-  const [, setBirdAnchorTick] = useState(0);
+  // Resolve the active section's perch element, honouring Shift+click overrides.
+  const activePerchEl = (() => {
+    if (!activeSectionId) return null;
+    const active = sections.find((s) => s.id === activeSectionId);
+    if (!active) return null;
+    return (
+      perchOverrides.get(active.id) ??
+      active.perchAnchor ??
+      active.anchor ??
+      null
+    );
+  })();
 
-  const firstPlacementRef = useRef(true);
+  // Mirror pos → posRef for flight-start capture.
+  useEffect(() => {
+    posRef.current = pos;
+  }, [pos]);
 
-  /** Element carrying the `.cw-perched` outline right now. */
-  const perchedElRef = useRef<HTMLElement | null>(null);
-  /** Element carrying `.cw-caged` — only used for Install post-cinematic
-   *  (the panel gets the cage outline after the drop). */
-  const cagedFrameElRef = useRef<HTMLElement | null>(null);
-
-  /** Swap the `.cw-perched` outline from previous perch to the new one. */
-  const lockPerchOutline = (el: HTMLElement) => {
-    if (perchedElRef.current && perchedElRef.current !== el) {
-      perchedElRef.current.classList.remove('cw-perched');
+  // Helpers — outline lock/unlock, wiggle fire.
+  const lockOutline = (el: HTMLElement) => {
+    if (outlineElRef.current && outlineElRef.current !== el) {
+      outlineElRef.current.classList.remove('cw-perched');
     }
     el.classList.add('cw-perched');
-    perchedElRef.current = el;
+    outlineElRef.current = el;
   };
-
-  const unlockPerchOutline = () => {
-    if (perchedElRef.current) {
-      perchedElRef.current.classList.remove('cw-perched');
-      perchedElRef.current = null;
-    }
-    if (cagedFrameElRef.current) {
-      cagedFrameElRef.current.classList.remove('cw-caged');
-      cagedFrameElRef.current = null;
+  const unlockOutline = () => {
+    if (outlineElRef.current) {
+      outlineElRef.current.classList.remove('cw-perched');
+      outlineElRef.current = null;
     }
   };
-
-  const setCagedFrame = (frame: HTMLElement | null) => {
-    if (cagedFrameElRef.current && cagedFrameElRef.current !== frame) {
-      cagedFrameElRef.current.classList.remove('cw-caged');
-    }
-    if (frame) {
-      frame.classList.add('cw-caged');
-      cagedFrameElRef.current = frame;
-    } else {
-      cagedFrameElRef.current = null;
-    }
-  };
-
   const fireWiggle = () => {
     if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
     setWiggle(true);
@@ -221,702 +109,187 @@ export function CanaryMascot() {
     }, WIGGLE_DURATION_MS);
   };
 
-  /** Cancel any in-flight arc. Safe to call when no flight is active. */
   const cancelFlight = () => {
-    const f = flightRef.current;
-    if (f) {
-      cancelAnimationFrame(f.raf);
-      flightRef.current = null;
+    if (flightRafRef.current !== null) {
+      cancelAnimationFrame(flightRafRef.current);
+      flightRafRef.current = null;
     }
     setFlying(false);
   };
 
-  /**
-   * Start an arc-path flight to `to`, landing on `perchEl`. Duration and
-   * arc amplitude both scale with linear distance; facing direction is
-   * pre-committed from the horizontal delta so it doesn't flicker mid-air.
-   *
-   * Skipped (snaps instead) when: reduced-motion is on, the cursor-actor
-   * is driving position (`birdHeldPos`), bounce physics owns position
-   * (`flow-stop`), there's no previous position to fly from, or the hop
-   * is below the snap-distance threshold. Also snaps + delays a one-shot
-   * wiggle on the very first placement so the bird doesn't fly from the
-   * viewport corner.
-   */
-  const startFlight = (
-    to: { x: number; y: number },
-    perchEl: HTMLElement | null
-  ) => {
-    if (reduce || birdHeldPos || activeSectionId === 'flow-stop') {
-      cancelFlight();
-      commitPos(to.x, to.y);
-      if (perchEl) lockPerchOutline(perchEl);
-      return;
-    }
+  // Fly to the active perch whenever it changes. On first ever placement
+  // or under reduced-motion, snap instead.
+  useEffect(() => {
+    if (!activePerchEl) return;
+
+    const to = perchPos(activePerchEl);
     const from = posRef.current;
-    if (!from || firstPlacementRef.current) {
+
+    // No previous position (first ever placement) — snap and wiggle after
+    // a beat so the outline has time to render before the bird lands on it.
+    if (!from) {
       cancelFlight();
-      commitPos(to.x, to.y);
-      firstPlacementRef.current = false;
-      if (firstPlacementTimerRef.current) clearTimeout(firstPlacementTimerRef.current);
-      firstPlacementTimerRef.current = setTimeout(() => {
+      unlockOutline();
+      setPos(to);
+      if (firstPlaceTimerRef.current) clearTimeout(firstPlaceTimerRef.current);
+      firstPlaceTimerRef.current = setTimeout(() => {
+        lockOutline(activePerchEl);
         fireWiggle();
-        if (perchEl) lockPerchOutline(perchEl);
-        firstPlacementTimerRef.current = null;
-      }, 240);
+        firstPlaceTimerRef.current = null;
+      }, 220);
       return;
     }
 
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const distance = Math.hypot(dx, dy);
-    if (distance < FLIGHT_SNAP_DISTANCE_PX) {
+
+    // Short hops or reduced-motion: just snap.
+    if (reduce || distance < FLIGHT_SNAP_DISTANCE_PX) {
       cancelFlight();
-      commitPos(to.x, to.y);
-      if (perchEl) lockPerchOutline(perchEl);
+      setPos(to);
+      lockOutline(activePerchEl);
       return;
     }
 
-    const duration = Math.min(
-      FLIGHT_MAX_MS,
-      Math.max(FLIGHT_MIN_MS, distance * 1.3 + 260)
-    );
-    const amplitude = Math.min(140, distance * 0.32);
-
+    // Arc flight.
     if (dx < -6) setFacing('left');
     else if (dx > 6) setFacing('right');
 
     cancelFlight();
+    unlockOutline();
     setFlying(true);
 
-    const tick = (now: number) => {
-      const f = flightRef.current;
-      if (!f) return;
-      const t = Math.min(1, (now - f.start) / f.duration);
-      const e = easeInOutCubic(t);
-      const x = f.from.x + (f.to.x - f.from.x) * e;
-      /** Parabolic lift — 0 at both endpoints, peaks at t=0.5. */
-      const arc = 4 * e * (1 - e) * f.amplitude;
-      const y = f.from.y + (f.to.y - f.from.y) * e - arc;
-      commitPos(x, y);
-      if (t < 1) {
-        f.raf = requestAnimationFrame(tick);
-      } else {
-        flightRef.current = null;
-        setFlying(false);
-        fireWiggle();
-        if (f.perchEl) lockPerchOutline(f.perchEl);
-      }
-    };
-
-    const raf = requestAnimationFrame(tick);
-    flightRef.current = {
-      from: { x: from.x, y: from.y },
-      to: { x: to.x, y: to.y },
-      start: performance.now(),
-      duration,
-      amplitude,
-      raf,
-      perchEl,
-    };
-  };
-
-  /** Which section is closest to the reading focus line. */
-  const computeFocus = () => {
-    if (sections.length === 0) {
-      return { bestId: null as string | null, currentDist: Infinity, bestDist: Infinity };
-    }
-    const focusY = window.innerHeight * 0.38;
-    let bestId: string | null = null;
-    let bestDist = Infinity;
-    let currentDist = Infinity;
-    for (const s of sections) {
-      if (!s.anchor) continue;
-      const rect = s.anchor.getBoundingClientRect();
-      const midY = rect.top + rect.height * 0.3;
-      const dist = Math.abs(midY - focusY);
-      if (s.id === activeSectionId) currentDist = dist;
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestId = s.id;
-      }
-    }
-    return { bestId, currentDist, bestDist };
-  };
-
-  /**
-   * Sub-pixel-quantized setState for position. Only triggers a React render
-   * when the rounded viewport coords actually change — prevents 60fps
-   * re-renders when the perch element isn't moving.
-   */
-  const commitPos = (x: number, y: number) => {
-    const qx = Math.round(x);
-    const qy = Math.round(y);
-    const prev = posRef.current;
-    if (prev && prev.x === qx && prev.y === qy) return;
-    setPos({ x: qx, y: qy });
-  };
-
-  /**
-   * Position the bird for the current frame.
-   *
-   * Priority:
-   *   1. `birdHeldPos` — cinematic/override is driving the position.
-   *   2. Active section is flow-stop (and not reduced-motion) — bounce
-   *      physics owns the position via its own rAF loop. Skip.
-   *   3. `birdAnchorRef` — post-cinematic "stay here" anchor (Install panel).
-   *      Center the bird INSIDE it.
-   *   4. Default — bird sits ON TOP of the perchAnchor's bounding box,
-   *      horizontally centered, vertically offset by BIRD_SIZE + OUTLINE_OFFSET
-   *      so its body sits exactly on the outline rendered by `.cw-perched`.
-   */
-  const recalcPosition = () => {
-    if (flightRef.current) return;
-    if (birdHeldPos) {
-      commitPos(birdHeldPos.x, birdHeldPos.y);
-      return;
-    }
-    if (activeSectionId === 'flow-stop' && !reduce) {
-      return;
-    }
-
-    const anchor = birdAnchorRef.current;
-    if (anchor && document.body.contains(anchor)) {
-      const rect = anchor.getBoundingClientRect();
-      commitPos(rect.left + PANEL_INSET_X, rect.top + PANEL_INSET_Y);
-      return;
-    }
-
-    const active = sections.find((s) => s.id === activeSectionId);
-    if (!active) return;
-
-    const perchEl =
-      perchOverrides.get(active.id) ??
-      active.perchAnchor ??
-      active.focusPoints?.[0] ??
-      active.anchor;
-    if (!perchEl) return;
-
-    const rect = perchEl.getBoundingClientRect();
-    commitPos(
-      rect.left + rect.width / 2 - BIRD_SIZE / 2,
-      rect.top - BIRD_SIZE - OUTLINE_OFFSET
+    const duration = Math.min(
+      FLIGHT_MAX_MS,
+      Math.max(FLIGHT_MIN_MS, distance * 1.1 + 200)
     );
-  };
+    /** Parabolic arc amplitude — taller for longer flights, capped. */
+    const amplitude = Math.min(120, distance * 0.28);
+    const start = performance.now();
+    /** Capture the target element so we re-read its rect on land (it may
+     *  have scrolled during the flight). */
+    const targetEl = activePerchEl;
 
-  /** Ref-mirror of recalcPosition so listeners see the latest closure. */
-  const recalcRef = useRef<() => void>(() => {});
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const e = easeInOutCubic(t);
+      const x = from.x + (to.x - from.x) * e;
+      const arcLift = 4 * e * (1 - e) * amplitude;
+      const y = from.y + (to.y - from.y) * e - arcLift;
+      setPos({ x, y });
+      if (t < 1) {
+        flightRafRef.current = requestAnimationFrame(tick);
+      } else {
+        flightRafRef.current = null;
+        setFlying(false);
+        // Re-read the perch rect in case it scrolled during the flight.
+        setPos(perchPos(targetEl));
+        lockOutline(targetEl);
+        fireWiggle();
+      }
+    };
+    flightRafRef.current = requestAnimationFrame(tick);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePerchEl, reduce]);
+
+  // Sit — while not flying, keep the bird glued to the perch as the page
+  // scrolls. Scroll + resize events drive the updates; no continuous rAF.
   useEffect(() => {
-    recalcRef.current = recalcPosition;
-  });
+    if (!activePerchEl) return;
+    const update = () => {
+      if (flightRafRef.current !== null) return;
+      setPos(perchPos(activePerchEl));
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [activePerchEl]);
 
-  // Scroll listener — commits section switches on idle; the bird is
-  // sticky-to-perch by default (no transition) so no scroll-lock class
-  // is needed. Outline is cleared while scrolling to avoid jitter; the
-  // active-section effect below re-locks it after TRAVEL_MS.
+  // Section detection — on scroll idle, pick the section whose anchor
+  // midpoint is closest to the reading focus line (viewport 38%). With
+  // scroll-snap mandatory + stop: always, each swipe lands the user
+  // firmly in one section, so there's no ambiguity to hysteresis-out.
   useEffect(() => {
     let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const evaluateSwitch = () => {
-      const { bestId, currentDist, bestDist } = computeFocus();
-      if (activeSectionId === null) {
-        if (bestId !== null) setActiveSection(bestId);
-        return;
+    const pickActive = () => {
+      if (sections.length === 0) return;
+      const focusY = window.innerHeight * 0.38;
+      let bestId: string | null = null;
+      let bestDist = Infinity;
+      for (const s of sections) {
+        if (!s.anchor) continue;
+        const r = s.anchor.getBoundingClientRect();
+        const midY = r.top + r.height * 0.3;
+        const d = Math.abs(midY - focusY);
+        if (d < bestDist) {
+          bestDist = d;
+          bestId = s.id;
+        }
       }
-      if (bestId !== null && bestId !== activeSectionId && currentDist - bestDist > SWITCH_HYSTERESIS_PX) {
-        setActiveSection(bestId);
-      }
-    };
-
-    const onIdle = () => {
-      evaluateSwitch();
+      if (bestId && bestId !== activeSectionId) setActiveSection(bestId);
     };
 
     const onScroll = () => {
-      unlockPerchOutline();
       if (idleTimer) clearTimeout(idleTimer);
-      idleTimer = setTimeout(onIdle, SCROLL_IDLE_MS);
-      // Per-frame recalc (below) keeps the bird glued to its perch while
-      // scrolling — no need to double-schedule one here.
-    };
-
-    const onResize = () => {
-      recalcRef.current?.();
+      idleTimer = setTimeout(pickActive, 60);
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    evaluateSwitch();
+    pickActive();
     return () => {
       if (idleTimer) clearTimeout(idleTimer);
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, activeSectionId]);
+  }, [sections, activeSectionId, setActiveSection]);
 
-  // Continuous per-frame recalc while a section is active. Skipped under
-  // reduced-motion — scroll/resize listeners handle those users.
-  useEffect(() => {
-    if (reduce) {
-      recalcRef.current?.();
-      return;
-    }
-    if (!activeSectionId) return;
-    let raf = 0;
-    const tick = () => {
-      recalcRef.current?.();
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [activeSectionId, reduce]);
-
-  // Section-change cleanup — whenever we leave flow-install, drop the
-  // post-cinematic anchor and the cage outline so the bird can perch
-  // normally in the next section.
-  useEffect(() => {
-    if (activeSectionId !== 'flow-install') {
-      birdAnchorRef.current = null;
-      if (cagedFrameElRef.current) {
-        cagedFrameElRef.current.classList.remove('cw-caged');
-        cagedFrameElRef.current = null;
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSectionId]);
-
-  // Single flight trigger — fires whenever the active perch element
-  // changes, whether that's a section switch (flow-install → flow-see)
-  // or an intra-section perch hop (UseCases tab 1 → tab 2). The flight
-  // driver handles facing, wiggle, and perch-outline locking on land.
-  const activePerchAnchor =
-    sections.find((s) => s.id === activeSectionId)?.perchAnchor ?? null;
-  /**
-   * `perchOverrides` is the Shift+click override map; when an entry exists
-   * for the active section we prefer it. Read inline so a newly-set
-   * override re-runs the flight effect.
-   */
-  const overrideForActive = activeSectionId
-    ? perchOverrides.get(activeSectionId) ?? null
-    : null;
-  const effectivePerch = overrideForActive ?? activePerchAnchor;
-
-  useEffect(() => {
-    if (!effectivePerch) return;
-    // Post-cinematic Install anchor pins the bird inside the panel — don't
-    // override that with the section's default perchAnchor.
-    if (birdAnchorRef.current) return;
-
-    const rect = effectivePerch.getBoundingClientRect();
-    const target = {
-      x: rect.left + rect.width / 2 - BIRD_SIZE / 2,
-      y: rect.top - BIRD_SIZE - OUTLINE_OFFSET,
-    };
-    startFlight(target, effectivePerch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectivePerch]);
-
-  // BLOCKED alert — bird flaps immediately when a policy violation fires.
+  // BLOCKED events — bird flaps when a policy violation fires.
   useEffect(() => {
     if (alertKey === 0) return;
     fireWiggle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertKey]);
 
-  // Cursor actor drives the bird's pos while `birdHeldPos` is set. When it
-  // clears, recompute perch pos and fire a wiggle (bird "just got dropped").
-  useEffect(() => {
-    if (birdHeldPos) {
-      setPos(birdHeldPos);
-      unlockPerchOutline();
-    } else {
-      recalcPosition();
-      // If a post-cinematic anchor is set (Install panel), let the caller
-      // apply the outline — don't overwrite with the section's default
-      // perchAnchor (that's the numberRow, which is no longer where the
-      // bird sits).
-      if (birdAnchorRef.current) {
-        fireWiggle();
-        return;
-      }
-      const active = sections.find((s) => s.id === activeSectionId);
-      const perchEl = active
-        ? (perchOverrides.get(active.id) ??
-            active.perchAnchor ??
-            active.focusPoints?.[0] ??
-            active.anchor)
-        : null;
-      if (perchEl) {
-        fireWiggle();
-        lockPerchOutline(perchEl);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [birdHeldPos]);
-
-  // Unmount cleanup — clear outline, drain all timers. No rAF to cancel
-  // here — the continuous rAF and bounce rAF have their own effect cleanups.
+  // Unmount cleanup.
   useEffect(() => {
     return () => {
-      unlockPerchOutline();
-      cascadeTimersRef.current.forEach(clearTimeout);
-      cascadeTimersRef.current = [];
-      cineTimersRef.current.forEach(clearTimeout);
-      cineTimersRef.current = [];
-      if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
-      if (firstPlacementTimerRef.current) clearTimeout(firstPlacementTimerRef.current);
+      unlockOutline();
       cancelFlight();
+      if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
+      if (firstPlaceTimerRef.current) clearTimeout(firstPlaceTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Mirror pos → posRef.
-  useEffect(() => {
-    posRef.current = pos;
-  }, [pos]);
-
-  // ─────────────────────────────────────────────────────────────────────
-  // flow-stop bounce physics — bird trapped inside [data-stop-cage].
-  // ─────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (reduce) return;
-    if (activeSectionId !== 'flow-stop') return;
-    if (birdHeldPos) return;
-
-    const cage = document.querySelector<HTMLElement>('[data-stop-cage]');
-    if (!cage) return;
-
-    // Initial position: bird's current pos (or cage center if unknown),
-    // clamped inside the cage walls.
-    const seedRect = cage.getBoundingClientRect();
-    const initial = posRef.current ?? {
-      x: seedRect.left + seedRect.width / 2 - BIRD_SIZE / 2,
-      y: seedRect.top + seedRect.height / 2 - BIRD_SIZE / 2,
-    };
-    let px = Math.max(
-      seedRect.left,
-      Math.min(seedRect.right - BIRD_SIZE, initial.x)
-    );
-    let py = Math.max(
-      seedRect.top,
-      Math.min(seedRect.bottom - BIRD_SIZE, initial.y)
-    );
-    // Random initial angle, constant speed.
-    const angle = Math.random() * Math.PI * 2;
-    let vx = Math.cos(angle) * BOUNCE_SPEED;
-    let vy = Math.sin(angle) * BOUNCE_SPEED;
-
-    let raf = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000); // cap dt on tab-switch
-      last = now;
-      // Re-read the cage each frame — it might resize on scroll (sticky layout).
-      const r = cage.getBoundingClientRect();
-      const minX = r.left;
-      const minY = r.top;
-      const maxX = r.right - BIRD_SIZE;
-      const maxY = r.bottom - BIRD_SIZE;
-
-      px += vx * dt;
-      py += vy * dt;
-
-      if (px <= minX) {
-        px = minX;
-        vx = Math.abs(vx);
-        if (facing !== 'right') setFacing('right');
-      } else if (px >= maxX) {
-        px = maxX;
-        vx = -Math.abs(vx);
-        if (facing !== 'left') setFacing('left');
-      }
-      if (py <= minY) {
-        py = minY;
-        vy = Math.abs(vy);
-      } else if (py >= maxY) {
-        py = maxY;
-        vy = -Math.abs(vy);
-      }
-
-      commitPos(px, py);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSectionId, reduce, birdHeldPos]);
-
-  // ─────────────────────────────────────────────────────────────────────
-  // Install cinematic — cursor in from right, morphs to hand, curves into
-  // the Install visual panel.
-  // ─────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (reduce) {
-      demoPlayedRef.current = true;
-      return;
-    }
-    if (activeSectionId !== 'flow-install') return;
-    if (demoPlayedRef.current) return;
-    if (!posRef.current) return;
-
-    const panel = document.querySelector<HTMLElement>(
-      '[data-canary-drop="install"]'
-    );
-    if (!panel) return;
-
-    demoPlayedRef.current = true;
-    playInstallCinematic(panel);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSectionId, reduce, pos]);
-
-  // Release-at-Learn: log line only (Round B drops the cage-break visual;
-  // Learn's perch is the Add-rule button and uses default above-button math).
-  useEffect(() => {
-    if (activeSectionId !== 'flow-learn') return;
-    if (releasePlayedRef.current) return;
-    releasePlayedRef.current = true;
-    logEvent('OBSERVED', 'Canary · released · free to perch');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSectionId]);
-
-  /** Play the drop cascade once the bird lands inside the Install panel. */
-  const runDropCascade = (zoneKey: string, zoneEl: HTMLElement) => {
-    const rows = DROP_CASCADES[zoneKey] ?? DROP_CASCADES.install;
-    cascadeTimersRef.current.forEach(clearTimeout);
-    cascadeTimersRef.current = rows.map((row) =>
-      setTimeout(() => {
-        logEvent(row.type, row.target);
-      }, row.delay)
-    );
-    setCagedFrame(zoneEl);
-    fireWiggle();
-  };
-
-  /**
-   * Four-beat install cinematic:
-   *   1. cursor-in   — arrow SVG materializes offscreen right, glides to
-   *                    just above+right of the bird's current position.
-   *   2. morph       — arrow → hand cross-fade (bird starts "held").
-   *   3. glide-apex  — bird + hand move to the curve's apex (mid-way,
-   *                    slightly above the line between start and panel).
-   *   4. glide-land  — bird + hand settle inside the panel.
-   * After: hand flies back offscreen right; bird's anchor is pinned to
-   * the panel via `birdAnchorRef`; cascade logs fire.
-   */
-  const playInstallCinematic = (panel: HTMLElement) => {
-    const start = posRef.current;
-    if (!start) return;
-    cineTimersRef.current.forEach(clearTimeout);
-    cineTimersRef.current = [];
-
-    const panelRect = panel.getBoundingClientRect();
-    const landX = panelRect.left + PANEL_INSET_X;
-    const landY = panelRect.top + PANEL_INSET_Y;
-
-    // Apex midpoint — halfway across, lifted by ~60px for an arc.
-    const apexX = (start.x + landX) / 2;
-    const apexY = Math.min(start.y, landY) - 60;
-
-    // Beat 1 — arrow cursor flies in from offscreen right to just above the bird.
-    setPointerVariant('arrow');
-    setCursorPos({ x: window.innerWidth + 60, y: start.y });
-    setCinePhase('cursor-in');
-    // Kick the CSS transition by moving to the target position on the next frame.
-    cineTimersRef.current.push(
-      setTimeout(() => {
-        setCursorPos({ x: start.x + BIRD_SIZE - 4, y: start.y - 12 });
-      }, 16)
-    );
-
-    // Beat 2 — morph arrow → hand, grab the bird.
-    cineTimersRef.current.push(
-      setTimeout(() => {
-        setCinePhase('morph');
-        setPointerVariant('hand');
-        // Bird starts "held" — the dangle animation plays on `.held`.
-        setBirdHeldPos({ x: start.x, y: start.y });
-      }, CINE_CURSOR_FLY_MS)
-    );
-
-    // Beat 3 — curved glide to apex. Hand travels with the bird (offset above-right).
-    cineTimersRef.current.push(
-      setTimeout(() => {
-        setCinePhase('gliding-apex');
-        setBirdHeldPos({ x: apexX, y: apexY });
-        setCursorPos({ x: apexX + BIRD_SIZE - 4, y: apexY - 12 });
-      }, CINE_CURSOR_FLY_MS + CINE_MORPH_MS)
-    );
-
-    // Beat 4 — settle down into the panel.
-    cineTimersRef.current.push(
-      setTimeout(() => {
-        setCinePhase('gliding-land');
-        setBirdHeldPos({ x: landX, y: landY });
-        setCursorPos({ x: landX + BIRD_SIZE - 4, y: landY - 12 });
-      }, CINE_CURSOR_FLY_MS + CINE_MORPH_MS + CINE_GLIDE_APEX_MS)
-    );
-
-    // After the landing transition completes: drop the bird (hand releases),
-    // anchor it to the panel, hand exits offscreen right, cascade fires.
-    cineTimersRef.current.push(
-      setTimeout(
-        () => {
-          setCinePhase('installed');
-          // Anchor the bird to the panel so scroll keeps it riding the panel rect.
-          birdAnchorRef.current = panel;
-          setBirdAnchorTick((t) => t + 1);
-          // Release cursor-actor position — recalc will read birdAnchorRef.
-          setBirdHeldPos(null);
-          // Hand flies back offscreen right.
-          setCursorPos({ x: window.innerWidth + 60, y: landY });
-          runDropCascade('install', panel);
-          // Hide the pointer after it exits.
-          cineTimersRef.current.push(
-            setTimeout(() => {
-              setCinePhase('idle');
-              setCursorPos(null);
-            }, CINE_HAND_EXIT_MS)
-          );
-        },
-        CINE_CURSOR_FLY_MS +
-          CINE_MORPH_MS +
-          CINE_GLIDE_APEX_MS +
-          CINE_GLIDE_LAND_MS +
-          CINE_DROP_MS
-      )
-    );
-  };
-
   if (!pos) return null;
 
-  const pointerVisible =
-    cinePhase !== 'idle' && cursorPos !== null;
-
-  // Split transitions:
-  //   - default (.mascot) = no transition (per-frame snap-tracking; sticky)
-  //   - .traveling        = 820ms ease-in-out-ish (section-switch flight)
-  //   - .cinematicApex    = 500ms ease-out (rise to apex)
-  //   - .cinematicLand    = 500ms ease-in (fall to panel)
-  //   - .cinematicSettle  = 120ms ease-out (drop into panel)
-  let cinematicClass = '';
-  if (cinePhase === 'gliding-apex') cinematicClass = styles.cinematicApex;
-  else if (cinePhase === 'gliding-land') cinematicClass = styles.cinematicLand;
-  else if (cinePhase === 'installed') cinematicClass = styles.cinematicSettle;
-
-  const bouncing = activeSectionId === 'flow-stop' && !reduce && !birdHeldPos;
-
   return (
-    <>
-      <div
-        className={[
-          styles.mascot,
-          facing === 'left' ? styles.faceLeft : '',
-          wiggle ? styles.wiggle : '',
-          flying ? styles.flying : '',
-          bouncing ? styles.bouncing : '',
-          birdHeldPos ? styles.held : '',
-          cinePhase !== 'idle' ? styles.cinePlay : '',
-          cinematicClass,
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        style={{
-          // @ts-expect-error — CSS custom props
-          '--cx': `${pos.x}px`,
-          '--cy': `${pos.y}px`,
-        }}
-        aria-hidden="true"
-      >
-        <div className={styles.inner}>
-          <div className={styles.sway}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className={styles.logo} src="/canary-mascot.svg" alt="" draggable={false} />
-          </div>
+    <div
+      className={[
+        styles.mascot,
+        facing === 'left' ? styles.faceLeft : '',
+        wiggle ? styles.wiggle : '',
+        flying ? styles.flying : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      style={{
+        // @ts-expect-error — CSS custom props
+        '--cx': `${pos.x}px`,
+        '--cy': `${pos.y}px`,
+      }}
+      aria-hidden="true"
+    >
+      <div className={styles.inner}>
+        <div className={styles.sway}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className={styles.logo} src="/canary-mascot.svg" alt="" draggable={false} />
         </div>
       </div>
-
-      {/* Phantom pointer — cursor SVG in from offscreen right, morphs into
-          a hand for the glide, then exits offscreen right. */}
-      {pointerVisible && cursorPos && (
-        <div
-          className={[
-            styles.pointer,
-            cinematicClass,
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          style={{
-            // @ts-expect-error — CSS custom props
-            '--cx': `${cursorPos.x}px`,
-            '--cy': `${cursorPos.y}px`,
-          }}
-          aria-hidden="true"
-        >
-          <div
-            className={[
-              styles.pointerSvg,
-              pointerVariant === 'arrow'
-                ? styles.pointerArrow
-                : styles.pointerHand,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            <svg
-              className={styles.pointerArrowSvg}
-              width="20"
-              height="22"
-              viewBox="0 0 20 22"
-              fill="none"
-            >
-              <path
-                d="M2 1.5L2 17.5L6.5 13.5L9.5 20L12 18.8L9 12.5L15 12L2 1.5Z"
-                fill="var(--text-black)"
-                stroke="var(--text-white)"
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <svg
-              className={styles.pointerHandSvg}
-              width="24"
-              height="26"
-              viewBox="0 0 24 26"
-              fill="none"
-            >
-              {/* Grabbing hand — rounded fist (palm) with a thumb stub
-                  sticking out to the upper left. Detail is deliberately
-                  low so it reads at 24px. */}
-              <rect
-                x="4"
-                y="8"
-                width="15"
-                height="14"
-                rx="5"
-                fill="var(--text-black)"
-                stroke="var(--text-white)"
-                strokeWidth="1"
-                strokeLinejoin="round"
-              />
-              <ellipse
-                cx="5"
-                cy="11"
-                rx="3"
-                ry="2.5"
-                transform="rotate(-35 5 11)"
-                fill="var(--text-black)"
-                stroke="var(--text-white)"
-                strokeWidth="1"
-              />
-              {/* Knuckle dimples — three small ticks across the top of the fist. */}
-              <line x1="8" y1="9.5" x2="8" y2="11" stroke="var(--text-white)" strokeWidth="0.9" strokeLinecap="round" />
-              <line x1="12" y1="9" x2="12" y2="10.5" stroke="var(--text-white)" strokeWidth="0.9" strokeLinecap="round" />
-              <line x1="15.5" y1="9.5" x2="15.5" y2="11" stroke="var(--text-white)" strokeWidth="0.9" strokeLinecap="round" />
-            </svg>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

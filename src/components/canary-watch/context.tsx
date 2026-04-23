@@ -57,12 +57,6 @@ interface CanaryWatchContextValue {
    * trigger an alert-wiggle — makes the bird feel like the policy enforcer.
    */
   alertKey: number;
-  /**
-   * When set, the bird's position is overridden to this viewport (x, y) and
-   * its transform transition is disabled — used by the cursor-actor intro
-   * to "carry" the bird during the drag-and-drop choreography.
-   */
-  birdHeldPos: { x: number; y: number } | null;
 
   registerSection: (reg: CanarySectionRegistration) => () => void;
   setActiveSection: (id: string | null) => void;
@@ -70,7 +64,6 @@ interface CanaryWatchContextValue {
   logEvent: (type: LogEventType, target: string) => void;
   setPerchOverride: (sectionId: string, el: HTMLElement | null) => void;
   setIntent: (source: string | null) => void;
-  setBirdHeldPos: (pos: { x: number; y: number } | null) => void;
 }
 
 const Ctx = createContext<CanaryWatchContextValue | null>(null);
@@ -114,7 +107,6 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
   const [sectionsSeen, setSectionsSeen] = useState<ReadonlySet<string>>(() => new Set());
   const [intent, setIntentState] = useState<string | null>(null);
   const [alertKey, setAlertKey] = useState(0);
-  const [birdHeldPos, setBirdHeldPosState] = useState<{ x: number; y: number } | null>(null);
 
   const registerSection = useCallback((reg: CanarySectionRegistration) => {
     // Idempotency check — if the new registration is identical to the
@@ -168,13 +160,6 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
   const setIntent = useCallback((source: string | null) => {
     setIntentState(source);
   }, []);
-
-  const setBirdHeldPos = useCallback(
-    (pos: { x: number; y: number } | null) => {
-      setBirdHeldPosState(pos);
-    },
-    []
-  );
 
   const triggerHighlight = useCallback((sectionId: string) => {
     setHighlightPulse({ sectionId, key: Date.now() });
@@ -293,14 +278,12 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
       sectionsSeen,
       intent,
       alertKey,
-      birdHeldPos,
       registerSection,
       setActiveSection,
       triggerHighlight,
       logEvent,
       setPerchOverride,
       setIntent,
-      setBirdHeldPos,
     }),
     // sectionsVersion in deps so consumers re-render when section list changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -313,14 +296,12 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
       sectionsSeen,
       intent,
       alertKey,
-      birdHeldPos,
       registerSection,
       setActiveSection,
       triggerHighlight,
       logEvent,
       setPerchOverride,
       setIntent,
-      setBirdHeldPos,
       sectionsVersion,
     ]
   );

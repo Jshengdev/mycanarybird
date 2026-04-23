@@ -5,63 +5,26 @@
   width: 28px;
   height: 28px;
   z-index: 50;
-  pointer-events: none; /* decorative — the session log is the real channel */
+  pointer-events: none;
   transform: translate3d(var(--cx, 40px), var(--cy, 40px), 0);
-  /* Default: no transition. A continuous rAF loop updates --cx/--cy every
-     frame to track the active perch, so the bird SNAPS each frame (sticky).
-     Section-switch gliding is opt-in via `.mascot.traveling` below. */
+  /* No transition on .mascot's transform: position is always set either
+     directly (sit mode, scroll-follow) or by the rAF flight driver. */
   transition: none;
   will-change: transform;
   user-select: none;
 }
 
-/* Lift the bird above the frame chrome during the install cinematic so
-   the phantom pointer reads correctly over the visual. */
-.mascot.cinePlay { z-index: 55; }
-
-/* Flying — applied while the rAF arc-path driver in CanaryMascot.tsx owns
-   the bird's position. We keep `transition: none` on .mascot so the driver's
-   per-frame translate3d renders crisply; the .flying class only toggles a
-   flight-pose tilt on .inner (lean into motion direction). */
+/* Flying — flight driver owns the bird's position. The class adds a
+   gentle forward lean on .inner so the bird reads as in-flight. */
 .mascot.flying .inner {
-  transform: translateY(-1px) scale(1.015) rotate(10deg);
+  transform: translateY(-1px) scale(1.01) rotate(9deg);
   transition: transform 220ms cubic-bezier(0.2, 0.8, 0.3, 1);
-  animation-play-state: paused; /* breathe animation would fight the tilt */
+  animation-play-state: paused;
 }
 .mascot.faceLeft.flying .inner {
-  /* faceLeft scales .inner by -1; invert the tilt so the bird still leans
-     into its actual motion direction rather than mirroring it. */
-  transform: scaleX(-1) translateY(-1px) scale(1.015) rotate(-10deg);
-}
-
-/* Flow-Stop bounce — physics loop drives pos every rAF frame. Any CSS
-   transition would lag behind the per-frame setState and produce a
-   smeary trail, so kill it while bouncing. */
-.mascot.bouncing { transition: none; }
-
-/* Install cinematic curve — two halves, different easings:
-     .cinematicApex → rise to apex (ease-out — fast start, gentle stop)
-     .cinematicLand → settle into panel (ease-in — gentle start, firm stop)
-   Together they trace a visible arc even though each segment is a straight
-   translate. Scroll-lock has lower specificity (single class) so cinematic
-   always wins while active. */
-.mascot.cinematicApex {
-  transition: transform 500ms cubic-bezier(0.2, 0.6, 0.3, 1) !important;
-}
-.mascot.cinematicLand {
-  transition: transform 500ms cubic-bezier(0.6, 0, 0.8, 0.6) !important;
-}
-.mascot.cinematicSettle {
-  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.4, 1) !important;
-}
-
-/* Held-by-cursor dangle — bird rocks while the hand carries it. */
-.mascot.held .sway {
-  animation: cw-dangle 0.9s ease-in-out infinite;
-}
-@keyframes cw-dangle {
-  0%, 100% { transform: rotate(-6deg); }
-  50%      { transform: rotate(4deg); }
+  /* faceLeft mirrors .inner via scaleX(-1); invert the lean so the bird
+     still leans into its actual motion direction. */
+  transform: scaleX(-1) translateY(-1px) scale(1.01) rotate(-9deg);
 }
 
 .mascot.faceLeft .inner { transform: scaleX(-1); }
@@ -94,16 +57,15 @@
 }
 
 .mascot.wiggle .sway {
-  animation: cw-wiggle 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  animation: cw-wiggle 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1;
 }
 
 @keyframes cw-wiggle {
   0%   { transform: translate(0, -3px) rotate(0deg); }
-  15%  { transform: translate(-2.5px, -1px) rotate(-8deg); }
-  32%  { transform: translate(2.5px, 0.5px) rotate(6deg); }
-  48%  { transform: translate(-1.8px, -0.5px) rotate(-4deg); }
-  65%  { transform: translate(1.2px, 0.3px) rotate(2.5deg); }
-  82%  { transform: translate(-0.5px, -0.2px) rotate(-1.2deg); }
+  18%  { transform: translate(-2px, -1px) rotate(-6deg); }
+  38%  { transform: translate(2px, 0.5px) rotate(5deg); }
+  58%  { transform: translate(-1.3px, -0.3px) rotate(-3deg); }
+  78%  { transform: translate(0.8px, 0.2px) rotate(1.6deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
@@ -114,7 +76,43 @@
   shape-rendering: geometricPrecision;
 }
 
-/* Highlight target styling — applied via classList from sections. */
+/* ── Perch outline ─────────────────────────────────────────────────
+   Solid bounding box around the bird's current perch. The bird sits
+   ON TOP of this outline — its feet land on the top stroke. The
+   `OUTLINE_OFFSET` constant in CanaryMascot.tsx tracks this value. */
+:global(.cw-perched) {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 6px;
+  background-color: rgba(11, 13, 196, 0.04);
+  animation: cw-perched-in 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: outline-color 200ms ease, outline-offset 200ms ease, background-color 200ms ease;
+}
+@keyframes cw-perched-in {
+  0%   { outline-offset: 14px; outline-color: transparent; background-color: transparent; }
+  100% { outline-offset: 6px;  outline-color: var(--accent-color); background-color: rgba(11, 13, 196, 0.04); }
+}
+
+/* Dark-section variant — white-tinted stroke for legibility. */
+:global(.cw-dark-perch) :global(.cw-perched) {
+  outline-color: rgba(247, 247, 247, 0.55);
+  animation-name: cw-perched-in-dark;
+}
+@keyframes cw-perched-in-dark {
+  0%   { outline-offset: 10px; outline-color: transparent; }
+  100% { outline-offset: 4px;  outline-color: rgba(247, 247, 247, 0.55); }
+}
+
+/* Stat-hover highlight (used by useStatTracker — unrelated to flight). */
+:global(.cw-stat-hover) {
+  background: rgba(11, 13, 196, 0.07);
+  color: var(--accent-color);
+  padding: 1px 4px;
+  margin: -1px -4px;
+  border-radius: 2px;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+/* Highlighted-on-entry target (pulse underline). */
 :global(.cw-highlighted) {
   position: relative;
 }
@@ -142,93 +140,6 @@
   100% { transform: scaleX(1); opacity: 0; }
 }
 
-:global(.cw-stat-hover) {
-  background: rgba(11, 13, 196, 0.07);
-  color: var(--accent-color);
-  padding: 1px 4px;
-  margin: -1px -4px;
-  border-radius: 2px;
-  transition: background 200ms ease, color 200ms ease;
-}
-
-/* Cage overlay — used on the Install visualFrame post-cinematic. */
-:global(.cw-caged) {
-  outline: 1px dashed var(--accent-color);
-  outline-offset: 6px;
-  transition: outline-offset 200ms ease, outline-color 200ms ease;
-}
-
-/* ── Phantom pointer (install cinematic) ────────────────────────────
-   One DOM node, two SVG children; we cross-fade between them on morph.
-   Transitions follow the mascot's curve classes so pointer + bird
-   travel as one unit. */
-.pointer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 60;
-  pointer-events: none;
-  transform: translate3d(var(--cx, 0), var(--cy, 0), 0);
-  transition: transform 600ms cubic-bezier(0.2, 0.8, 0.4, 1);
-  filter: drop-shadow(0 2px 6px rgba(10, 10, 10, 0.25));
-}
-.pointer.cinematicApex {
-  transition: transform 500ms cubic-bezier(0.2, 0.6, 0.3, 1) !important;
-}
-.pointer.cinematicLand {
-  transition: transform 500ms cubic-bezier(0.6, 0, 0.8, 0.6) !important;
-}
-.pointer.cinematicSettle {
-  transition: transform 500ms cubic-bezier(0.4, 0, 0.6, 1) !important;
-}
-
-.pointerSvg {
-  position: relative;
-  width: 26px;
-  height: 28px;
-}
-.pointerArrowSvg,
-.pointerHandSvg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transition: opacity 200ms linear;
-}
-.pointerArrow .pointerArrowSvg { opacity: 1; }
-.pointerArrow .pointerHandSvg  { opacity: 0; }
-.pointerHand  .pointerArrowSvg { opacity: 0; }
-.pointerHand  .pointerHandSvg  { opacity: 1; }
-
-/* ── Perch outline ─────────────────────────────────────────────────
-   Solid bounding box around whatever the bird is currently perched
-   on — reads clearly on the ASCII-patterned hero background. The bird
-   sits ON TOP of this outline, so its feet land on the top stroke.
-   The `OUTLINE_OFFSET` constant in CanaryMascot.tsx must track this
-   `outline-offset` value. */
-:global(.cw-perched) {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 6px;
-  background-color: rgba(11, 13, 196, 0.04);
-  animation: cw-perched-in 260ms cubic-bezier(0.4, 0, 0.2, 1);
-  transition: outline-color 200ms ease, outline-offset 200ms ease, background-color 200ms ease;
-}
-@keyframes cw-perched-in {
-  0%   { outline-offset: 14px; outline-color: transparent; background-color: transparent; }
-  100% { outline-offset: 6px;  outline-color: var(--accent-color); background-color: rgba(11, 13, 196, 0.04); }
-}
-/* On dark sections, use a white-tinted stroke. */
-:global(.cw-dark-perch) :global(.cw-perched) {
-  outline-color: rgba(247, 247, 247, 0.55);
-}
-:global(.cw-dark-perch) :global(.cw-perched)::after,
-:global(.cw-dark-perch) :global(.cw-perched) {
-  animation-name: cw-perched-in-dark;
-}
-@keyframes cw-perched-in-dark {
-  0%   { outline-offset: 10px; outline-color: transparent; }
-  100% { outline-offset: 4px;  outline-color: rgba(247, 247, 247, 0.55); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mascot { transition: none !important; }
   .mascot.flying .inner,
@@ -238,8 +149,4 @@
   .mascot.wiggle .sway { animation: none !important; }
   :global(.cw-highlighted)::after { animation: none !important; transform: scaleX(1); }
   :global(.cw-perched) { animation: none !important; outline-offset: 6px; }
-  :global(.cw-caged) { outline-offset: 6px; }
-  .pointer { transition: none !important; }
-  .pointerArrowSvg,
-  .pointerHandSvg { transition: none !important; }
 }
