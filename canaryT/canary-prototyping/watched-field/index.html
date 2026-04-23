@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Watched Field — Canary</title>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+      crossorigin
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"
+      defer
+    ></script>
+    <style>
+      /* ----------------------------------------------------------
+         Tokens — mirrored from canary-dashboard/src/styles/tokens.css
+         ---------------------------------------------------------- */
+      :root {
+        --black:        #0A0A0A;
+        --text-black:   #0A0A0A;
+        --text-white:   #F7F7F7;
+        --icon-grey:    #5A5A7A;
+        --grey-stroke:  #DCDCE8;
+        --hover-gray:   #F5F5F8;
+        --bg:           #F5F5F8;
+        --card-bg:      #FAFAFA;
+        --critical:     #B84040;
+        --safe:         #2D7A55;
+        --accent-color: #0B0DC4;
+        --font-sans:    'Plus Jakarta Sans', system-ui, sans-serif;
+        --font-mono:    'IBM Plex Mono', 'Menlo', monospace;
+        --scanline-overlay: rgba(10, 10, 10, 0.03);
+        --pulse-duration: 2s;
+      }
+
+      *, *::before, *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text-black);
+        font-family: var(--font-sans);
+        line-height: 1.6;
+      }
+
+      /* ----------------------------------------------------------
+         Canvas layer — fixed behind all content
+         pointer-events: none so text + buttons stay clickable
+         ---------------------------------------------------------- */
+      #sketch-root {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      #sketch-root canvas {
+        display: block;
+      }
+
+      /* ----------------------------------------------------------
+         Sample page content — just enough to demonstrate the
+         field's scroll behavior over real copy. In production this
+         would be replaced by the landing sections themselves.
+         ---------------------------------------------------------- */
+      main {
+        position: relative;
+        z-index: 1;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 96px 40px;
+      }
+
+      section {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 64px 0;
+      }
+
+      .eyebrow {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--icon-grey);
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 4.5vw + 0.5rem, 4.5rem);
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
+        max-width: 20ch;
+        margin-bottom: 24px;
+      }
+
+      h2 {
+        font-size: clamp(1.5rem, 2.2vw + 0.5rem, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+        max-width: 22ch;
+        margin-bottom: 20px;
+      }
+
+      p {
+        font-size: 1.0625rem;
+        color: var(--icon-grey);
+        max-width: 52ch;
+      }
+
+      .badge {
+        position: fixed;
+        top: 24px;
+        right: 32px;
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--icon-grey);
+        padding: 8px 12px;
+        background: var(--card-bg);
+        border: 1px solid var(--grey-stroke);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 10;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--safe);
+        animation: pulse var(--pulse-duration) ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 0.8; transform: scale(1); }
+        50%      { opacity: 1;   transform: scale(1.15); }
+      }
+
+      .scroll-readout {
+        position: fixed;
+        bottom: 24px;
+        right: 32px;
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        color: var(--icon-grey);
+        letter-spacing: 0.12em;
+        z-index: 10;
+        background: var(--card-bg);
+        padding: 6px 10px;
+        border: 1px solid var(--grey-stroke);
+      }
+
+      .footer-note {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        color: var(--icon-grey);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding-top: 80px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .dot { animation: none; }
+        html { scroll-behavior: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="badge" aria-hidden="true">
+      <span class="dot"></span>
+      LIVE · CANARY OBSERVING
+    </div>
+    <div class="scroll-readout" aria-hidden="true">
+      <span id="scroll-label">phase 1 · calm</span>
+    </div>
+
+    <div id="sketch-root" aria-hidden="true"></div>
+
+    <main>
+      <section>
+        <span class="eyebrow">Prototype</span>
+        <h1>The trust layer for autonomous agents.</h1>
+        <p>
+          A drop-in SDK that sees every action, blocks every mistake, and
+          learns your agent. Built for Claude Code, Browser Use, openClaw,
+          and Hermes.
+        </p>
+      </section>
+
+      <section>
+        <span class="eyebrow">Observe</span>
+        <h2>See what your agent actually did.</h2>
+        <p>
+          Visual replay + action log. Scrub any session. Every click, every
+          keystroke, every screen state — recorded. Other tools trace
+          text-in and text-out. Canary sees the screen.
+        </p>
+      </section>
+
+      <section>
+        <span class="eyebrow">Control</span>
+        <h2>Set the rules. Canary blocks the mistake before it happens.</h2>
+        <p>
+          Rules live in your codebase. Canary intercepts the agent
+          mid-action. Works with any computer-use framework that can POST
+          events.
+        </p>
+      </section>
+
+      <section>
+        <span class="eyebrow">Improve</span>
+        <h2>Canary learns your agent.</h2>
+        <p>
+          Session data becomes suggested rules. Insights surface patterns
+          your agent keeps hitting. Every session makes the next one safer.
+        </p>
+      </section>
+
+      <section>
+        <h2>The agents are already in the mine. We are the canary.</h2>
+        <p class="footer-note">Prototype · watched-field · 2026-04-16</p>
+      </section>
+    </main>
+
+    <script>
+      /* =============================================================
+         THE WATCHED FIELD
+         See PHILOSOPHY.md for the algorithmic manifesto.
+         ============================================================= */
+
+      // --------------------------------------------------------------
+      // Token-derived colors
+      // --------------------------------------------------------------
+      const COLOR = {
+        agent:    [90, 90, 122],    // --icon-grey
+        trail:    [90, 90, 122],
+        accent:   [11, 13, 196],    // --accent-color
+        canary:   [45, 122, 85],    // --safe
+        critical: [184, 64, 64],    // --critical
+      };
+
+      // --------------------------------------------------------------
+      // Scroll state — updated via rAF, read by p5
+      // --------------------------------------------------------------
+      const scrollState = {
+        progress: 0, // 0..1
+        phase: 0,    // 0 calm | 1 observed | 2 converged
+      };
+
+      function updateScrollState() {
+        const scrollable = Math.max(
+          1,
+          document.documentElement.scrollHeight - window.innerHeight
+        );
+        const raw = window.scrollY / scrollable;
+        scrollState.progress = Math.min(1, Math.max(0, raw));
+        scrollState.phase =
+          scrollState.progress < 0.35 ? 0 :
+          scrollState.progress < 0.7  ? 1 : 2;
+
+        const label = document.getElementById('scroll-label');
+        if (label) {
+          const names = ['phase 1 · calm', 'phase 2 · observed', 'phase 3 · converged'];
+          label.textContent = names[scrollState.phase];
+        }
+      }
+
+      let scrollScheduled = false;
+      window.addEventListener('scroll', () => {
+        if (scrollScheduled) return;
+        scrollScheduled = true;
+        requestAnimationFrame(() => {
+          updateScrollState();
+          scrollScheduled = false;
+        });
+      }, { passive: true });
+      updateScrollState();
+
+      // --------------------------------------------------------------
+      // prefers-reduced-motion check
+      // --------------------------------------------------------------
+      const prefersReduced =
+        window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // --------------------------------------------------------------
+      // The sketch
+      // --------------------------------------------------------------
+      const MAX_AGENTS = 160;
+      const MIN_AGENTS = 40;
+      const FIELD_RES  = 24;     // px per flow-field cell
+      const TRAIL_LEN_BASE = 18; // base trail buffer size
+
+      let agents = [];
+      let canarySentinel = null;
+      let rings = [];
+      let fieldT = 0;     // slow evolving noise z
+      let cols, rows;
+
+      // --------------------------------------------------------------
+      // Agent class — Reynolds steering with wander + flow-field-follow
+      // --------------------------------------------------------------
+      class Agent {
+        constructor(p, x, y, opts = {}) {
+          this.p = p;
+          this.pos = p.createVector(x, y);
+          this.vel = p5.Vector.random2D().mult(0.6);
+          this.acc = p.createVector(0, 0);
+          this.maxSpeed = opts.maxSpeed || 1.6;
+          this.maxForce = opts.maxForce || 0.05;
+          this.wanderTheta = p.random(p.TWO_PI);
+          this.isCanary = opts.isCanary || false;
+          this.trail = [];
+          this.trailMax = opts.trailMax || TRAIL_LEN_BASE;
+          this.divergence = 0; // 1 = following field, 0 = orthogonal, -1 = against
+        }
+
+        followField(fieldFn) {
+          const v = fieldFn(this.pos.x, this.pos.y);
+          const desired = v.copy().setMag(this.maxSpeed);
+          const steer = p5.Vector.sub(desired, this.vel);
+          steer.limit(this.maxForce);
+          // Divergence = how aligned the agent is with the local field
+          const velN = this.vel.copy().normalize();
+          const fN = v.copy().normalize();
+          this.divergence = velN.dot(fN);
+          this.acc.add(steer);
+        }
+
+        wander(strength = 0.03) {
+          const wanderRadius = 40;
+          const wanderDistance = 60;
+          const wanderChange = 0.25;
+          this.wanderTheta += this.p.random(-wanderChange, wanderChange);
+          const velCopy = this.vel.copy().setMag(wanderDistance);
+          const center = p5.Vector.add(this.pos, velCopy);
+          const offset = this.p.createVector(
+            Math.cos(this.wanderTheta) * wanderRadius,
+            Math.sin(this.wanderTheta) * wanderRadius
+          );
+          const target = p5.Vector.add(center, offset);
+          const desired = p5.Vector.sub(target, this.pos).setMag(this.maxSpeed);
+          const steer = p5.Vector.sub(desired, this.vel);
+          steer.limit(this.maxForce * strength * 40);
+          this.acc.add(steer.mult(strength));
+        }
+
+        separate(others, perception = 22) {
+          const steer = this.p.createVector(0, 0);
+          let count = 0;
+          for (const o of others) {
+            if (o === this) continue;
+            const d = p5.Vector.dist(this.pos, o.pos);
+            if (d > 0 && d < perception) {
+              const diff = p5.Vector.sub(this.pos, o.pos).div(d * d);
+              steer.add(diff);
+              count++;
+            }
+          }
+          if (count > 0) {
+            steer.setMag(this.maxSpeed);
+            steer.sub(this.vel);
+            steer.limit(this.maxForce);
+            this.acc.add(steer.mult(0.8));
+          }
+        }
+
+        update() {
+          this.vel.add(this.acc);
+          this.vel.limit(this.maxSpeed);
+          this.pos.add(this.vel);
+          this.acc.mult(0);
+          this.trail.push(this.pos.copy());
+          if (this.trail.length > this.trailMax) this.trail.shift();
+        }
+
+        edges(w, h) {
+          // Wrap edges for continuous flow, except the Canary (which bounces
+          // gently back into view so it remains present)
+          if (this.isCanary) {
+            const margin = 40;
+            if (this.pos.x < margin)      this.vel.x += 0.05;
+            if (this.pos.x > w - margin)  this.vel.x -= 0.05;
+            if (this.pos.y < margin)      this.vel.y += 0.05;
+            if (this.pos.y > h - margin)  this.vel.y -= 0.05;
+            return;
+          }
+          if (this.pos.x < -10)     { this.pos.x = w + 10; this.trail = []; }
+          if (this.pos.x > w + 10)  { this.pos.x = -10;    this.trail = []; }
+          if (this.pos.y < -10)     { this.pos.y = h + 10; this.trail = []; }
+          if (this.pos.y > h + 10)  { this.pos.y = -10;    this.trail = []; }
+        }
+
+        draw(p, phaseAlpha) {
+          // Trail
+          if (this.trail.length > 2) {
+            p.noFill();
+            for (let i = 1; i < this.trail.length; i++) {
+              const a = p.map(i, 0, this.trail.length, 0, phaseAlpha * 0.9);
+              if (this.isCanary) {
+                p.stroke(COLOR.canary[0], COLOR.canary[1], COLOR.canary[2], a * 255);
+                p.strokeWeight(1.1);
+              } else {
+                p.stroke(COLOR.trail[0], COLOR.trail[1], COLOR.trail[2], a * 180);
+                p.strokeWeight(0.9);
+              }
+              const prev = this.trail[i - 1];
+              const curr = this.trail[i];
+              p.line(prev.x, prev.y, curr.x, curr.y);
+            }
+          }
+          // Dot
+          p.noStroke();
+          if (this.isCanary) {
+            // Canary: always visible, gentle pulse tied to pulseFrame
+            const pulse = 0.7 + Math.sin(p.frameCount * 0.04) * 0.3;
+            p.fill(COLOR.canary[0], COLOR.canary[1], COLOR.canary[2], 200 * pulse);
+            p.circle(this.pos.x, this.pos.y, 4.5);
+            p.fill(COLOR.canary[0], COLOR.canary[1], COLOR.canary[2], 40);
+            p.circle(this.pos.x, this.pos.y, 10);
+          } else {
+            p.fill(COLOR.agent[0], COLOR.agent[1], COLOR.agent[2], phaseAlpha * 210);
+            p.circle(this.pos.x, this.pos.y, 2.2);
+          }
+        }
+      }
+
+      // --------------------------------------------------------------
+      // Observation ring — fades over its lifetime
+      // --------------------------------------------------------------
+      class Ring {
+        constructor(p, x, y) {
+          this.pos = p.createVector(x, y);
+          this.life = 0;
+          this.maxLife = 42;
+        }
+
+        update() {
+          this.life++;
+        }
+
+        dead() {
+          return this.life > this.maxLife;
+        }
+
+        draw(p) {
+          const t = this.life / this.maxLife;
+          const radius = 8 + t * 28;
+          const alpha = (1 - t) * 220;
+          p.noFill();
+          p.stroke(COLOR.accent[0], COLOR.accent[1], COLOR.accent[2], alpha);
+          p.strokeWeight(1.1);
+          p.circle(this.pos.x, this.pos.y, radius * 2);
+          // Inner tick
+          p.stroke(COLOR.accent[0], COLOR.accent[1], COLOR.accent[2], alpha * 0.7);
+          p.strokeWeight(0.6);
+          p.circle(this.pos.x, this.pos.y, radius * 2 + 6);
+        }
+      }
+
+      // --------------------------------------------------------------
+      // p5 sketch instance mode
+      // --------------------------------------------------------------
+      const sketch = (p) => {
+        p.setup = () => {
+          const root = document.getElementById('sketch-root');
+          const c = p.createCanvas(window.innerWidth, window.innerHeight);
+          c.parent(root);
+          p.pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+
+          cols = Math.ceil(p.width / FIELD_RES) + 1;
+          rows = Math.ceil(p.height / FIELD_RES) + 1;
+
+          agents = [];
+          for (let i = 0; i < MIN_AGENTS; i++) {
+            agents.push(new Agent(p, p.random(p.width), p.random(p.height)));
+          }
+          canarySentinel = new Agent(
+            p,
+            p.width * 0.5,
+            p.height * 0.5,
+            { isCanary: true, maxSpeed: 1.0, maxForce: 0.03, trailMax: 40 }
+          );
+
+          if (prefersReduced) {
+            // Evolve the field + simulate 600 frames to establish a still
+            // composition, then stop.
+            for (let i = 0; i < 600; i++) {
+              fieldT += 0.0005;
+              stepAgents(p);
+            }
+            p.noLoop();
+            renderFrame(p);
+          }
+        };
+
+        p.windowResized = () => {
+          p.resizeCanvas(window.innerWidth, window.innerHeight);
+          cols = Math.ceil(p.width / FIELD_RES) + 1;
+          rows = Math.ceil(p.height / FIELD_RES) + 1;
+        };
+
+        p.draw = () => {
+          fieldT += 0.0005 + scrollState.progress * 0.0012;
+          adjustPopulation(p);
+          stepAgents(p);
+          renderFrame(p);
+        };
+      };
+
+      // Flow field lookup — 2D Perlin noise → angle → unit vector
+      function fieldAt(p, x, y) {
+        const scale = 0.003 + scrollState.progress * 0.0015;
+        const n = p.noise(x * scale, y * scale, fieldT);
+        const angle = n * p.TAU * 2; // allow rotation past full circle for turbulence
+        return p.createVector(Math.cos(angle), Math.sin(angle));
+      }
+
+      function adjustPopulation(p) {
+        const target = Math.round(
+          MIN_AGENTS + (MAX_AGENTS - MIN_AGENTS) * scrollState.progress
+        );
+        while (agents.length < target) {
+          agents.push(new Agent(p, p.random(p.width), p.random(p.height)));
+        }
+        while (agents.length > target) {
+          agents.pop();
+        }
+      }
+
+      function stepAgents(p) {
+        const fieldFn = (x, y) => fieldAt(p, x, y);
+        for (const a of agents) {
+          a.followField(fieldFn);
+          // Wander weight decreases as scroll progresses — the field takes over
+          a.wander(0.06 + (1 - scrollState.progress) * 0.12);
+          a.separate(agents, 24);
+          a.update();
+          a.edges(p.width, p.height);
+        }
+        canarySentinel.followField(fieldFn);
+        canarySentinel.wander(0.04);
+        canarySentinel.update();
+        canarySentinel.edges(p.width, p.height);
+
+        // Observation picker — frequency rises with scroll
+        const obsInterval = Math.round(180 - scrollState.progress * 130);
+        if (p.frameCount % Math.max(30, obsInterval) === 0 && agents.length > 0) {
+          // Find the agent with the lowest divergence (most off-path)
+          let worst = agents[0];
+          for (const a of agents) {
+            if (a.divergence < worst.divergence) worst = a;
+          }
+          if (worst.divergence < 0.35) {
+            rings.push(new Ring(p, worst.pos.x, worst.pos.y));
+          }
+        }
+
+        // Update + prune rings
+        for (const r of rings) r.update();
+        rings = rings.filter((r) => !r.dead());
+      }
+
+      function renderFrame(p) {
+        // Soft fade of previous frame instead of full clear — creates
+        // gentle motion blur without demanding repaints (additive alpha wash)
+        p.noStroke();
+        p.fill(245, 245, 248, 32); // --bg with low alpha
+        p.rect(0, 0, p.width, p.height);
+
+        const phaseAlpha = 0.6 + scrollState.progress * 0.35;
+        for (const a of agents) a.draw(p, phaseAlpha);
+        canarySentinel.draw(p, 1);
+        for (const r of rings) r.draw(p);
+      }
+
+      // Start when p5 script has loaded (we used defer on the CDN tag)
+      window.addEventListener('load', () => {
+        new p5(sketch);
+      });
+    </script>
+  </body>
+</html>

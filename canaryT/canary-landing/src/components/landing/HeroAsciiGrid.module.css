@@ -1,0 +1,28 @@
+/**
+ * Per-character hover spin. Pointer-driven, no JS.
+ * Parent grid has pointer-events:none to avoid stealing interaction
+ * from the hero stack; we re-enable it on the chars themselves so
+ * the :hover rule can fire.
+ */
+.char {
+  display: inline-block;
+  width: 0.55em;
+  text-align: center;
+  pointer-events: auto;
+  will-change: transform;
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.char:hover {
+  transform: rotate(360deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .char {
+    transition: none;
+    will-change: auto;
+  }
+  .char:hover {
+    transform: none;
+  }
+}

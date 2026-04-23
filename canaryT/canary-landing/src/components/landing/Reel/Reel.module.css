@@ -1,0 +1,71 @@
+.reelSection {
+  position: relative;
+  /* 300vh is the intentional scroll runway: GSAP pins the inner 100vh stage
+     with pinSpacing:false (no auto-padding), so this section's natural height
+     is what drives the scroll distance for the 3-frame transition. */
+  height: 300vh;
+  background: var(--bg);
+}
+
+.stage {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.frames {
+  position: absolute;
+  inset: 0;
+}
+
+.stageBadge {
+  position: absolute;
+  bottom: var(--space-8);
+  right: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  z-index: 2;
+  font-family: var(--font-mono);
+  color: var(--icon-grey);
+}
+
+.stageBadgeLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+}
+
+.stageBadgeValue {
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  gap: 4px;
+}
+
+.stageBadgeCurrent {
+  color: var(--text-black);
+}
+
+.stageBadgeDivider {
+  opacity: 0.4;
+}
+
+.reelStatic {
+  position: relative;
+  background: var(--bg);
+  padding: var(--space-16) 0;
+}
+
+.staticStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.staticStack > * {
+  position: relative !important;
+  opacity: 1 !important;
+  min-height: 90vh;
+}

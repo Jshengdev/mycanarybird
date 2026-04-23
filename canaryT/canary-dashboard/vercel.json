@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/demo/photon-research",
+      "permanent": false
+    }
+  ]
+}

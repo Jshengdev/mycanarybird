@@ -1,0 +1,67 @@
+.footer {
+  background: var(--black);
+  color: var(--text-white);
+  padding: 48px 24px;
+}
+
+.footerInner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.brandLogo {
+  height: 20px;
+  filter: brightness(0) invert(1);
+}
+
+.brandTagline {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(247, 247, 247, 0.5);
+}
+
+.footerLinks {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.footerLinks a {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(247, 247, 247, 0.35);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.footerLinks a:hover {
+  color: var(--text-white);
+}
+
+.footerLinks a:focus-visible {
+  outline: 2px solid var(--text-white);
+  outline-offset: 4px;
+}
+
+.footerDivider {
+  color: rgba(247, 247, 247, 0.2);
+}
+
+.footerLegal {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  color: rgba(247, 247, 247, 0.2);
+}

@@ -1,0 +1,141 @@
+/* ============================================================
+   Canary Landing — Global Tokens
+   Aligned with canonical dashboard design system.
+   Source of truth: canary-dashboard/src/styles/tokens.css
+   All color values are canonical. No invented values.
+
+   Fonts: owned by next/font in layout.tsx (do NOT redefine
+   --font-sans, --font-mono, --font-mono-alt here).
+   ============================================================ */
+
+:root {
+
+  /* ── COLORS ─────────────────────────────────────────────── */
+
+  /* Core palette */
+  --black:          #0A0A0A;
+  --text-black:     #0A0A0A;
+  --text-white:     #F7F7F7;
+  --icon-grey:      #5A5A7A;
+  --grey-stroke:    #DCDCE8;
+  --hover-gray:     #F5F5F8;
+  --pressed-gray:   #EDEDF2;
+  --bg:             #F5F5F8;
+  --card-bg:        #FAFAFA;
+  --sidebar-bg:     #FAFAFA;
+
+  /* Status */
+  --critical:       #B84040;
+  --warning:        #8C6508;
+  --safe:           #2D7A55;
+
+  /* Accent */
+  --accent-color:   #0B0DC4;
+
+  /* Gradient tokens — premium texture layer */
+  --card-gradient:                   linear-gradient(160deg, #FDFDFD 0%, #F7F7FA 100%);
+  --card-gradient-hover:             linear-gradient(160deg, #F8F8FB 0%, #F3F3F6 100%);
+  --gradient-border-active:          linear-gradient(135deg, #0B0DC4 0%, #6B6DDF 50%, #DCDCE8 100%);
+  --gradient-border-active-vertical: linear-gradient(180deg, #0B0DC4 0%, #6B6DDF 100%);
+
+  /* Grays */
+  --gray-100:       #F5F5F8;
+
+  /* ── SPACING ─────────────────────────────────────────────── */
+
+  --space-1:        4px;
+  --space-2:        6px;
+  --space-3:        8px;
+  --space-4:        12px;
+  --space-5:        16px;
+  --space-6:        20px;
+  --space-8:        24px;
+  --space-10:       32px;
+  --space-12:       48px;
+  --space-16:       64px;
+
+  /* ── BORDER RADIUS ───────────────────────────────────────── */
+
+  --radius-card:    4px;
+  --radius-btn:     2px;
+  --radius-switch:  12px;
+  --radius-card-sm: 10px;
+  --radius-card-lg: 12px;
+  --radius-avatar:  2px;
+
+  /* ── TYPOGRAPHY ──────────────────────────────────────────── */
+  /* --font-sans, --font-mono, --font-mono-alt are owned by next/font
+     in layout.tsx. Do NOT redefine them here — :root would override
+     the class-based next/font definitions, breaking font loading. */
+
+  /* ── BORDERS ─────────────────────────────────────────────── */
+
+  --border:         1px solid var(--grey-stroke);
+  --border-focus:   2px solid var(--grey-stroke);
+  --border-error:   2px solid var(--critical);
+
+  /* ── Z-INDEX ─────────────────────────────────────────────── */
+
+  --z-base:         0;
+  --z-sticky:       10;
+  --z-dropdown:     100;
+  --z-toast:        200;
+  --z-backdrop:     290;
+  --z-modal:        300;
+
+  /* ── TRANSITIONS ─────────────────────────────────────────── */
+
+  --transition-fast:    100ms ease;
+  --transition-base:    120ms ease;
+  --transition-enter:   200ms ease-out;
+  --transition-ascii:   400ms;
+  --transition-shimmer: 1.4s ease-in-out;
+
+  /* ── MOTION (legacy landing tokens, preserved) ──────────── */
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast:  100ms;
+  --duration-base:  200ms;
+  --duration-slow:  400ms;
+
+  /* ── LANDING-ONLY: monitor-esque micro-details ──────────── */
+
+  --scanline-overlay: rgba(10, 10, 10, 0.03);  /* derived from --black */
+  --blink-duration:   800ms;
+  --pulse-duration:   2s;
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-black);
+  background: var(--bg);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

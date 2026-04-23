@@ -1,0 +1,422 @@
+/* ── Shared ────────────────────────────────────────────────────── */
+.emailCard,
+.terminal,
+.scrubber,
+.codeBlock {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-mono);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── GTM · Blocked email ──────────────────────────────────────── */
+.emailCard {
+  background: #FFFFFF;
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.emailHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--grey-stroke);
+  background: var(--card-bg);
+}
+
+.emailHost {
+  font-size: 0.75rem;
+  color: var(--icon-grey);
+}
+
+.emailStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.emailStatusBlocked {
+  background: rgba(184, 64, 64, 0.1);
+  color: var(--critical);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--critical);
+  box-shadow: 0 0 0 2px rgba(184, 64, 64, 0.22);
+}
+
+.emailMeta {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--grey-stroke);
+}
+
+.emailMetaLabel {
+  color: var(--icon-grey);
+  min-width: 32px;
+}
+
+.emailMetaValue {
+  color: var(--text-black);
+}
+
+.emailBody {
+  padding: var(--space-5);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--icon-grey);
+  line-height: 1.55;
+  flex: 1;
+  position: relative;
+}
+
+.emailBody::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0,
+    transparent 10px,
+    rgba(184, 64, 64, 0.05) 10px,
+    rgba(184, 64, 64, 0.05) 14px
+  );
+  pointer-events: none;
+}
+
+.policyMatch {
+  padding: var(--space-3) var(--space-5);
+  background: var(--card-bg);
+  border-top: 1px solid var(--grey-stroke);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.policyLabel {
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  color: var(--icon-grey);
+  font-weight: 600;
+}
+
+.policyCode {
+  font-size: 0.75rem;
+  color: var(--critical);
+}
+
+/* ── Coding · Terminal ────────────────────────────────────────── */
+.terminal {
+  background: #0A0A0A;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  color: #E8E8EE;
+}
+
+.terminalChrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px var(--space-4);
+  background: #1A1A22;
+  border-bottom: 1px solid #2A2A36;
+}
+
+.termDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3A3A48;
+}
+
+.termDot[data-color='red']   { background: #FF5F56; }
+.termDot[data-color='amber'] { background: #FFBD2E; }
+.termDot[data-color='green'] { background: #27C93F; }
+
+.termTitle {
+  margin-left: var(--space-3);
+  font-size: 0.6875rem;
+  color: #8A8A9A;
+  letter-spacing: 0.06em;
+}
+
+.terminalBody {
+  padding: var(--space-4) var(--space-5);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.termLine {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.termPrompt {
+  color: #27C93F;
+  user-select: none;
+}
+
+.termCmd {
+  color: #E8E8EE;
+}
+
+.termLineInfo {
+  display: flex;
+  gap: var(--space-3);
+  color: #8A8A9A;
+  font-size: 0.75rem;
+  padding-left: var(--space-6);
+}
+
+.termOk {
+  color: #27C93F;
+  font-weight: 600;
+}
+
+.termLineBlocked {
+  display: flex;
+  gap: var(--space-3);
+  padding-left: var(--space-6);
+  color: #FFB5B5;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(255, 90, 90, 0.08);
+  margin: 4px calc(-1 * var(--space-5));
+  padding-left: calc(var(--space-5) + var(--space-6));
+  padding-right: var(--space-5);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-left: 2px solid #FF5F56;
+}
+
+.termBlocked {
+  color: #FF5F56;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.termLineBlockedDetail {
+  display: flex;
+  gap: var(--space-2);
+  padding-left: var(--space-6);
+  font-size: 0.6875rem;
+  color: #8A8A9A;
+}
+
+.termPolicy {
+  color: #8A8A9A;
+}
+
+.termPolicyCode {
+  color: #C6C6D4;
+}
+
+.termCaret {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: #E8E8EE;
+  animation: cursor-blink 1.1s steps(2) infinite;
+}
+
+@keyframes cursor-blink {
+  50% { opacity: 0; }
+}
+
+/* ── Long-running · Scrubber ──────────────────────────────────── */
+.scrubber {
+  background: #FFFFFF;
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  gap: var(--space-4);
+}
+
+.scrubHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.75rem;
+}
+
+.scrubLabel {
+  color: var(--icon-grey);
+  letter-spacing: 0.06em;
+}
+
+.scrubDuration {
+  color: var(--text-black);
+  font-weight: 600;
+}
+
+.scrubTrack {
+  position: relative;
+  height: 28px;
+  background: var(--card-bg);
+  border: 1px solid var(--grey-stroke);
+  border-radius: 2px;
+}
+
+.scrubMarker {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 1px;
+}
+
+.scrubMarker[data-kind='observed'] { background: var(--accent-color); opacity: 0.35; }
+.scrubMarker[data-kind='flagged']  { background: var(--warning); }
+.scrubMarker[data-kind='blocked']  { background: var(--critical); }
+.scrubMarker[data-kind='learned']  { background: var(--safe); }
+
+.scrubPlayhead {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--text-black);
+  transform: translateX(-1px);
+}
+
+.scrubPlayhead::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -4px;
+  width: 10px;
+  height: 6px;
+  background: var(--text-black);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.scrubLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: 0.6875rem;
+  color: var(--icon-grey);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  letter-spacing: 0.04em;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.legendDot[data-kind='observed'] { background: var(--accent-color); opacity: 0.5; }
+.legendDot[data-kind='flagged']  { background: var(--warning); }
+.legendDot[data-kind='blocked']  { background: var(--critical); }
+.legendDot[data-kind='learned']  { background: var(--safe); }
+
+.scrubFocus {
+  background: var(--card-bg);
+  border: 1px solid var(--grey-stroke);
+  border-left: 2px solid var(--critical);
+  padding: var(--space-3) var(--space-4);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scrubFocusHeader {
+  font-size: 0.6875rem;
+  color: var(--critical);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.scrubFocusBody {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--text-black);
+  line-height: 1.5;
+}
+
+/* ── Custom · Code block ──────────────────────────────────────── */
+.codeBlock {
+  background: #0A0A0A;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  color: #E8E8EE;
+}
+
+.codeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-5);
+  background: #1A1A22;
+  border-bottom: 1px solid #2A2A36;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+}
+
+.codeLang {
+  color: #FFBD2E;
+  font-weight: 700;
+}
+
+.codeComment {
+  color: #6A6A7A;
+}
+
+.codeBody {
+  margin: 0;
+  padding: var(--space-5);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow: auto;
+  flex: 1;
+  color: #E8E8EE;
+}
+
+.codeFooter {
+  padding: var(--space-3) var(--space-5);
+  background: #1A1A22;
+  border-top: 1px solid #2A2A36;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.75rem;
+}
+
+.codeFooterLabel {
+  color: #8A8A9A;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 0.625rem;
+}
+
+.codeFooterValue {
+  color: #6EE7A0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

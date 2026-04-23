@@ -1,0 +1,234 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  font-family: var(--font-mono);
+  color: var(--text-black);
+  overflow: hidden;
+}
+
+/*
+ * .cage — explicit inner walls. Distinct from the .visualFrame's outer
+ * card border because we want to read as a CONTAINER the bird is trapped
+ * inside, separate from the CRT panel chrome. Round B's bounce animation
+ * will use `[data-stop-cage="true"]` as the bouncing bounds.
+ */
+.cage {
+  position: absolute;
+  inset: 12px;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border: 1px solid var(--grey-stroke);
+  border-radius: 2px;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Replay video fills the cage interior. Corner ticks sit above it via
+   z-index so the cage walls still read as a container. */
+.replay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  border: 0 solid var(--accent-color);
+  z-index: 1;
+}
+
+.corner[data-corner='tl'] {
+  top: -1px;
+  left: -1px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+}
+
+.corner[data-corner='tr'] {
+  top: -1px;
+  right: -1px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+}
+
+.corner[data-corner='bl'] {
+  bottom: -1px;
+  left: -1px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+}
+
+.corner[data-corner='br'] {
+  bottom: -1px;
+  right: -1px;
+  border-bottom-width: 1px;
+  border-right-width: 1px;
+}
+
+.panel {
+  background: var(--card-bg);
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.panelLabel {
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--icon-grey);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.panelLabelTag {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.ruleInput {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--text-black);
+  min-height: 1.45em;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.ruleInput::before {
+  content: '\201C';
+  color: var(--icon-grey);
+  margin-right: 2px;
+}
+
+.ruleInput::after {
+  content: '\201D';
+  color: var(--icon-grey);
+  margin-left: 2px;
+}
+
+.cursor {
+  display: inline-block;
+  width: 0.45em;
+  height: 1em;
+  background: var(--text-black);
+  margin-left: 2px;
+  animation: svCursor var(--blink-duration) steps(1, end) infinite;
+  vertical-align: -2px;
+}
+
+@keyframes svCursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.policy {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-black);
+  background: transparent;
+  padding-left: var(--space-5);
+  position: relative;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.policy::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.policyKey {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.policyArg {
+  color: var(--icon-grey);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+
+.attempt {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--hover-gray);
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  font-size: 0.75rem;
+  color: var(--text-black);
+}
+
+.attemptKey {
+  font-weight: 600;
+}
+
+.attemptArg {
+  color: var(--icon-grey);
+}
+
+.blocked {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  background: rgba(184, 64, 64, 0.08);
+  border: 1px solid var(--critical);
+  border-radius: var(--radius-card);
+  color: var(--critical);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 240ms ease, transform 300ms var(--ease-out-quart);
+}
+
+.blockedActive {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.blockedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--critical);
+  margin-right: var(--space-3);
+  display: inline-block;
+}
+
+.blockedLeft {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+  .blocked { transition: none; }
+}

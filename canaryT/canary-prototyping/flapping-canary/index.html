@@ -1,0 +1,930 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flapping Canary — Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" />
+    <style>
+      :root {
+        --black:        #0A0A0A;
+        --text-black:   #0A0A0A;
+        --icon-grey:    #5A5A7A;
+        --grey-stroke:  #DCDCE8;
+        --bg:           #F5F5F8;
+        --card-bg:      #FAFAFA;
+        --safe:         #2D7A55;
+        --accent-color: #0B0DC4;
+        --font-sans:    'Plus Jakarta Sans', system-ui, sans-serif;
+        --font-mono:    'IBM Plex Mono', 'Menlo', monospace;
+      }
+
+      *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+      html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+      body {
+        background: var(--bg);
+        color: var(--text-black);
+        font-family: var(--font-sans);
+        line-height: 1.6;
+      }
+
+      main { position: relative; max-width: 1120px; margin: 0 auto; padding: 96px 40px; }
+      section {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 64px 0;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--icon-grey);
+        margin-bottom: 24px;
+      }
+      h1 {
+        font-size: clamp(2.5rem, 4.5vw + 0.5rem, 4.5rem);
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
+        max-width: 20ch;
+        margin-bottom: 20px;
+      }
+      h2 {
+        font-size: clamp(1.5rem, 2.2vw + 0.5rem, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+        max-width: 22ch;
+        margin-bottom: 20px;
+      }
+      p {
+        font-size: 1.0625rem;
+        color: var(--icon-grey);
+        max-width: 52ch;
+      }
+
+      .slot-anchor { display: inline-block; width: 0; height: 0; vertical-align: top; position: relative; }
+      body.debug .slot-anchor::before {
+        content: '';
+        position: absolute; top: -3px; left: -3px;
+        width: 6px; height: 6px;
+        background: red; border-radius: 50%; opacity: 0.6; z-index: 1000;
+      }
+
+      .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 28px;
+        background: var(--accent-color);
+        color: #F7F7F7;
+        font-family: var(--font-sans);
+        font-size: 0.875rem;
+        font-weight: 500;
+        border: 1px solid var(--accent-color);
+        border-radius: 2px;
+        margin-top: 20px;
+        cursor: pointer;
+      }
+
+      .readout {
+        position: fixed;
+        bottom: 24px; left: 24px;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        color: var(--icon-grey);
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        background: var(--card-bg);
+        padding: 8px 12px;
+        border: 1px solid var(--grey-stroke);
+        z-index: 100;
+      }
+      .debug-toggle {
+        position: fixed;
+        bottom: 24px; right: 24px;
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        background: var(--card-bg);
+        border: 1px solid var(--grey-stroke);
+        padding: 8px 12px;
+        cursor: pointer;
+        color: var(--icon-grey);
+        z-index: 100;
+      }
+
+      /* ==============================================================
+         THE CANARY — single brand SVG, three pose transforms.
+         Since we use the same path for every frame, line thickness,
+         geometry, and eye position are guaranteed identical. The
+         "flap" is a minimal transform applied per pose — 2-3% scale,
+         ≤1.5px translate, invisible frame-by-frame but reads as
+         subtle motion when cycled.
+         ============================================================== */
+
+      .canary {
+        position: fixed;
+        top: 0; left: 0;
+        width: 26px;
+        height: 26px;
+        z-index: 50;
+        pointer-events: none;
+        transform: translate3d(var(--cx, 40px), var(--cy, 40px), 0);
+        transition: transform 920ms cubic-bezier(0.4, 0.02, 0.2, 1);
+        will-change: transform;
+      }
+
+      /* Flip horizontally when the bird flies leftward */
+      .canary.face-left .canary-svg {
+        transform: scaleX(-1);
+      }
+
+      .canary-svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        transform-origin: 50% 65%;
+      }
+
+      .canary-logo {
+        width: 100%;
+        height: 100%;
+        display: block;
+        /* Preserve crisp edges when the browser scales the SVG down */
+        shape-rendering: geometricPrecision;
+      }
+
+      /* Pose layer — each pose is a separate SVG file with baked-in
+         transform. We swap which <img> is visible via opacity. */
+      .canary-pose {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+      .canary-frame {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        opacity: 0;
+        transition: opacity 60ms linear;
+        shape-rendering: geometricPrecision;
+      }
+      .canary.pose-rest      #frame-rest      { opacity: 1; }
+      .canary.pose-flap-up   #frame-flap-up   { opacity: 1; }
+      .canary.pose-flap-down #frame-flap-down { opacity: 1; }
+
+      /* Idle breathe when perched — ≤1.5% scale, barely perceptible.
+         Attached as a wrapper OUTSIDE the pose layer so they compose. */
+      .canary-breathe {
+        width: 100%;
+        height: 100%;
+        animation: breathe 3.4s ease-in-out infinite;
+      }
+      @keyframes breathe {
+        0%, 100% { transform: translateY(0)   scale(1); }
+        50%      { transform: translateY(-1px) scale(1.015); }
+      }
+
+      /* Reduced motion: hold rest pose, no breathe */
+      @media (prefers-reduced-motion: reduce) {
+        .canary { transition: none; }
+        .canary-breathe { animation: none !important; }
+        .canary-pose { transition: none; }
+        html { scroll-behavior: auto; }
+      }
+
+      /* ==========================================================
+         CANARY WATCHES YOU — highlight system
+         When the bird arrives at a slot, targets within that section
+         get a subtle accent-color underline draw-in, hold for 1.5s,
+         then fade out. Subtle. Never blocks the copy.
+         ========================================================== */
+      [data-highlight] {
+        position: relative;
+        display: inline-block;
+      }
+      [data-highlight]::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -2px;
+        height: 1px;
+        background: var(--accent-color);
+        transform: scaleX(0);
+        transform-origin: left center;
+        transition: transform 360ms cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+      }
+      [data-highlight].highlighted::after {
+        transform: scaleX(1);
+      }
+      [data-highlight].fading::after {
+        transition: transform 900ms cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 900ms ease;
+        opacity: 0;
+      }
+
+      /* Inline stat emphasis when the canary gazes at it */
+      [data-stat-highlight] {
+        display: inline-block;
+        padding: 1px 4px;
+        margin: -1px -4px;
+        border-radius: 2px;
+        transition: background 400ms ease, color 400ms ease;
+      }
+      [data-stat-highlight].highlighted {
+        background: rgba(11, 13, 196, 0.07);
+        color: var(--accent-color);
+      }
+
+      /* ==========================================================
+         SESSION REPORT — bottom of page, live-updating action log
+         Styled to match Canary's dashboard aesthetic: mono font,
+         dark card, uppercase action tags, timestamp + target rows.
+         ========================================================== */
+      .session-report {
+        background: var(--black);
+        color: var(--text-white, #F7F7F7);
+        padding: 80px 40px 96px;
+        min-height: auto !important;
+        display: block !important;
+        margin-top: 40px;
+      }
+      .report-inner {
+        max-width: 1040px;
+        margin: 0 auto;
+      }
+      .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(247, 247, 247, 0.15);
+        margin-bottom: 24px;
+      }
+      .report-title {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(247, 247, 247, 0.5);
+      }
+      .report-title .live-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: var(--safe);
+        border-radius: 50%;
+        margin-right: 10px;
+        vertical-align: baseline;
+        animation: session-pulse 2s ease-in-out infinite;
+      }
+      @keyframes session-pulse {
+        0%, 100% { opacity: 0.7; transform: scale(1); }
+        50%      { opacity: 1;   transform: scale(1.15); }
+      }
+      .report-meta {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
+        color: rgba(247, 247, 247, 0.45);
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .report-meta span { color: rgba(247, 247, 247, 0.85); }
+
+      .report-headline {
+        font-family: var(--font-sans);
+        font-size: clamp(1.5rem, 2vw + 0.5rem, 2rem);
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.15;
+        color: #F7F7F7;
+        margin-bottom: 8px;
+      }
+      .report-sub {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: rgba(247, 247, 247, 0.55);
+        margin-bottom: 36px;
+      }
+
+      /* Log rows */
+      .log {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .log-row {
+        display: grid;
+        grid-template-columns: 104px 110px 1fr;
+        gap: 16px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(247, 247, 247, 0.08);
+        align-items: baseline;
+        opacity: 0;
+        transform: translateY(4px);
+        animation: log-row-in 240ms ease-out forwards;
+      }
+      @keyframes log-row-in {
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .log-time {
+        color: rgba(247, 247, 247, 0.5);
+        letter-spacing: 0.05em;
+        font-variant-numeric: tabular-nums;
+      }
+      .log-type {
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.6875rem;
+      }
+      .log-type.observed { color: var(--safe); }
+      .log-type.flagged  { color: #C98A1C; } /* muted amber for flagged */
+      .log-type.blocked  { color: var(--critical); }
+      .log-type.learned  { color: rgba(247, 247, 247, 0.75); }
+      .log-type.suggested { color: #6B6DDF; } /* muted lavender */
+      .log-target {
+        color: rgba(247, 247, 247, 0.88);
+      }
+      .log-target .hl {
+        color: var(--safe);
+      }
+
+      /* Summary footer */
+      .report-summary {
+        margin-top: 40px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(247, 247, 247, 0.15);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 24px;
+        font-family: var(--font-mono);
+      }
+      .summary-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .summary-label {
+        font-size: 0.625rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: rgba(247, 247, 247, 0.5);
+      }
+      .summary-value {
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: #F7F7F7;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Empty state for log when no events yet */
+      .log-empty {
+        font-family: var(--font-mono);
+        font-size: 0.8125rem;
+        color: rgba(247, 247, 247, 0.35);
+        padding: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="readout" aria-hidden="true">
+      <span id="readout">slot 0 · idle</span>
+    </div>
+    <button class="debug-toggle" aria-hidden="true"
+      onclick="document.body.classList.toggle('debug')">debug slots</button>
+
+    <!--
+      The Canary. Layers outside-in:
+        .canary            → position in viewport (translate)
+        .canary-svg        → horizontal flip when leftward
+        .canary-breathe    → perpetual 3.4s breathe
+        .canary-pose       → rest/flap-up/flap-down transform
+        <svg>              → the brand path, black fill, transparent bg
+    -->
+    <div class="canary pose-rest" id="canary" aria-hidden="true">
+      <div class="canary-svg">
+        <div class="canary-breathe">
+          <div class="canary-pose">
+            <img class="canary-frame" id="frame-rest"      src="frames/canary-rest.svg"      alt="" />
+            <img class="canary-frame" id="frame-flap-up"   src="frames/canary-flap-up.svg"   alt="" />
+            <img class="canary-frame" id="frame-flap-down" src="frames/canary-flap-down.svg" alt="" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <section data-slot="1" data-section-name="hero">
+        <span class="eyebrow">
+          Prototype · flapping canary
+          <span class="slot-anchor" data-slot-target="1"></span>
+        </span>
+        <h1 data-highlight="hero.headline">The trust layer<br/>for autonomous agents.</h1>
+        <p>A drop-in SDK that sees every action, blocks every mistake, and learns your agent.</p>
+      </section>
+
+      <section data-slot="2" data-section-name="observe">
+        <span class="eyebrow">Observe<span class="slot-anchor" data-slot-target="2"></span></span>
+        <h2 data-highlight="observe.headline">See what your agent actually did.</h2>
+        <p>
+          Visual replay + action log. Scrub any session. Every click, every
+          keystroke, every screen state — recorded. Rules run in
+          <span data-stat-highlight="observe.stat">10ms</span> —
+          can&apos;t be prompt-injected away.
+        </p>
+      </section>
+
+      <section data-slot="3" data-section-name="control">
+        <span class="eyebrow">Control<span class="slot-anchor" data-slot-target="3"></span></span>
+        <h2 data-highlight="control.headline">Set the rules. Canary blocks the mistake before it happens.</h2>
+        <p>
+          Rules live in your codebase. Canary intercepts the agent mid-action.
+          <span data-stat-highlight="control.stat">88%</span> of organizations
+          report agent security incidents.
+        </p>
+      </section>
+
+      <section data-slot="4" data-section-name="improve">
+        <span class="eyebrow">Improve<span class="slot-anchor" data-slot-target="4"></span></span>
+        <h2 data-highlight="improve.headline">Canary learns your agent.</h2>
+        <p>
+          Session data becomes suggested rules.
+          <span data-stat-highlight="improve.stat">90%</span> lower visual
+          processing cost than text-only tools.
+        </p>
+      </section>
+
+      <section data-slot="5" data-section-name="closer">
+        <span class="eyebrow">Closer</span>
+        <h2 data-highlight="closer.headline">The agents are already in the mine.<br/>We are the canary.</h2>
+        <p>Enter the waitlist. The canary slots into your stack the moment you're approved.</p>
+        <button class="cta-button" data-highlight="closer.cta">
+          Get early access →<span class="slot-anchor" data-slot-target="5"></span>
+        </button>
+      </section>
+
+      <!-- Live session report — the meta-joke.
+           Canary watched you read the page. Here's what it caught. -->
+      <section class="session-report" data-section-name="report">
+        <div class="report-inner">
+          <div class="report-header">
+            <div class="report-title">
+              <span class="live-dot"></span>CANARY SESSION LOG · LIVE
+            </div>
+            <div class="report-meta">
+              <span id="session-time">00:00</span>
+              <span id="session-date" class="session-date-val"></span>
+            </div>
+          </div>
+
+          <h2 class="report-headline">Caught you.</h2>
+          <p class="report-sub">
+            Same action log we'd show you for a real agent session.
+            Except the agent is you, and what you clicked was this page.
+          </p>
+
+          <ul class="log" id="session-log" aria-live="polite">
+            <li class="log-empty" id="log-empty">
+              No events yet. Scroll up — Canary is watching.
+            </li>
+          </ul>
+
+          <div class="report-summary">
+            <div class="summary-stat">
+              <span class="summary-label">Events observed</span>
+              <span class="summary-value" id="stat-events">0</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-label">Sections visited</span>
+              <span class="summary-value" id="stat-sections">0</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-label">Flags raised</span>
+              <span class="summary-value" id="stat-flags">0</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-label">Attention score</span>
+              <span class="summary-value" id="stat-score">—</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const canary  = document.getElementById('canary');
+      const readout = document.getElementById('readout');
+
+      const POSES = ['pose-rest', 'pose-flap-up', 'pose-flap-down'];
+
+      const anchorSelectors = ['1', '2', '3', '4', '5'];
+      const CANARY_SIZE = 26;
+      const offsetX = -CANARY_SIZE - 6;
+      const offsetY = -CANARY_SIZE * 0.85;
+
+      let currentSlot = 0;
+      let transitTimer = null;
+      let flapTimer = null;
+      let idleTwitchTimer = null;
+
+      /* --- Pose class swap ---------------------------------------- */
+      function setPose(name) {
+        canary.classList.remove(...POSES);
+        canary.classList.add(name);
+      }
+
+      /* Flap cycle while in transit.
+         up → rest → down → rest, 180ms each → ~720ms per full cycle.
+         Slow enough to read as real wings, subtle enough not to jitter. */
+      function startFlapCycle() {
+        stopFlap();
+        const sequence = ['pose-flap-up', 'pose-rest', 'pose-flap-down', 'pose-rest'];
+        let i = 0;
+        setPose(sequence[i]);
+        flapTimer = setInterval(() => {
+          i = (i + 1) % sequence.length;
+          setPose(sequence[i]);
+        }, 180);
+      }
+
+      function stopFlap() {
+        if (flapTimer) { clearInterval(flapTimer); flapTimer = null; }
+        setPose('pose-rest');
+      }
+
+      /* Idle twitch: every 3.5–6s, briefly show a single flap pose for
+         ~120ms, then back to rest. Soft "still alive" signal. */
+      function scheduleIdleTwitch() {
+        clearIdleTwitch();
+        const delay = 3500 + Math.random() * 2500;
+        idleTwitchTimer = setTimeout(() => {
+          const useFlap = Math.random() < 0.6 ? 'pose-flap-up' : 'pose-flap-down';
+          setPose(useFlap);
+          setTimeout(() => {
+            setPose('pose-rest');
+            scheduleIdleTwitch();
+          }, 120);
+        }, delay);
+      }
+      function clearIdleTwitch() {
+        if (idleTwitchTimer) { clearTimeout(idleTwitchTimer); idleTwitchTimer = null; }
+      }
+
+      /* --- Slot positioning ---------------------------------------- */
+      function getAnchorPos(slot) {
+        const el = document.querySelector(`[data-slot-target="${slot}"]`);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        return { x: rect.left + offsetX, y: rect.top + offsetY };
+      }
+
+      function determineSlot() {
+        const focusY = window.innerHeight * 0.38;
+        let best = null;
+        let bestDist = Infinity;
+        for (const s of anchorSelectors) {
+          const pos = getAnchorPos(s);
+          if (!pos) continue;
+          const dist = Math.abs(pos.y - focusY);
+          if (dist < bestDist) { bestDist = dist; best = s; }
+        }
+        return best;
+      }
+
+      function moveToSlot(slot) {
+        const pos = getAnchorPos(slot);
+        if (!pos) return;
+
+        const prevX = parseFloat(canary.style.getPropertyValue('--cx')) || pos.x;
+        const goingLeft = pos.x < prevX - 4;
+
+        canary.style.setProperty('--cx', `${pos.x}px`);
+        canary.style.setProperty('--cy', `${pos.y}px`);
+        canary.classList.toggle('face-left', goingLeft);
+
+        clearIdleTwitch();
+        startFlapCycle();
+        if (transitTimer) clearTimeout(transitTimer);
+        transitTimer = setTimeout(() => {
+          stopFlap();
+          scheduleIdleTwitch();
+        }, 940);
+
+        currentSlot = slot;
+        readout.textContent = `slot ${slot} · ${goingLeft ? 'flying left' : 'flying right'}`;
+      }
+
+      function tick() {
+        const next = determineSlot();
+        if (next && next !== currentSlot) {
+          moveToSlot(next);
+        } else if (next === currentSlot) {
+          const pos = getAnchorPos(currentSlot);
+          if (pos) {
+            canary.style.setProperty('--cx', `${pos.x}px`);
+            canary.style.setProperty('--cy', `${pos.y}px`);
+          }
+          readout.textContent = `slot ${currentSlot} · perched`;
+        }
+      }
+
+      let scheduled = false;
+      window.addEventListener('scroll', () => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(() => { tick(); scheduled = false; });
+      }, { passive: true });
+
+      window.addEventListener('resize', () => requestAnimationFrame(tick));
+      window.addEventListener('load', () => {
+        const initial = determineSlot();
+        if (initial) {
+          const pos = getAnchorPos(initial);
+          canary.style.setProperty('--cx', `${pos.x}px`);
+          canary.style.setProperty('--cy', `${pos.y}px`);
+          currentSlot = initial;
+          canary.style.transition = 'none';
+          void canary.offsetHeight;
+          canary.style.transition = '';
+          readout.textContent = `slot ${initial} · perched`;
+          scheduleIdleTwitch();
+        }
+      });
+
+      /* prefers-reduced-motion: no flap, no twitch */
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        startFlapCycle = () => {};
+        scheduleIdleTwitch = () => {};
+      }
+
+      /* =============================================================
+         CANARY WATCHES YOU
+         - Highlight system: when the bird lands at a slot, the
+           associated headline/stat/CTA in that section briefly
+           highlights with a thin accent underline
+         - Session tracker: every event the user fires is logged
+           with a timestamp and ACTION type matching Canary's
+           dashboard vocabulary (OBSERVED / FLAGGED / BLOCKED / etc.)
+         - Live report rendering at the bottom section
+         ============================================================= */
+
+      /* ---- highlight module ---- */
+      const HIGHLIGHT_TARGETS_BY_SLOT = {
+        '1': ['hero.headline'],
+        '2': ['observe.headline', 'observe.stat'],
+        '3': ['control.headline', 'control.stat'],
+        '4': ['improve.headline', 'improve.stat'],
+        '5': ['closer.headline', 'closer.cta'],
+      };
+
+      function highlightForSlot(slot) {
+        const targets = HIGHLIGHT_TARGETS_BY_SLOT[slot] || [];
+        targets.forEach((targetId, i) => {
+          const el = document.querySelector(
+            `[data-highlight="${targetId}"], [data-stat-highlight="${targetId}"]`
+          );
+          if (!el) return;
+          // Stagger sub-targets (so headline highlights first, then stat)
+          setTimeout(() => {
+            el.classList.remove('fading');
+            el.classList.add('highlighted');
+            // Fade out after 1.5s
+            setTimeout(() => {
+              el.classList.add('fading');
+              setTimeout(() => {
+                el.classList.remove('highlighted', 'fading');
+              }, 900);
+            }, 1500);
+          }, i * 180);
+        });
+      }
+
+      /* ---- session tracker ---- */
+      const sessionStart = Date.now();
+      const session = {
+        events: [],
+        sectionsSeen: new Set(),
+        sectionsReadTime: {},  // name -> ms spent
+        sectionEnterTime: {},
+        currentSection: null,
+        flagCount: 0,
+        scrollVelocityHistory: [],
+      };
+
+      function fmtTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const mm = Math.floor(s / 60).toString().padStart(2, '0');
+        const ss = (s % 60).toString().padStart(2, '0');
+        return `${mm}:${ss}`;
+      }
+
+      function fmtClockTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const h = Math.floor(s / 3600).toString().padStart(2, '0');
+        const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+        const sec = (s % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${sec}`;
+      }
+
+      function logEvent(type, target) {
+        const tOffset = Date.now() - sessionStart;
+        const event = { type, target, tOffset, time: fmtClockTime(tOffset) };
+        session.events.push(event);
+        if (type === 'FLAGGED') session.flagCount++;
+        renderLogRow(event);
+        updateSummary();
+      }
+
+      /* ---- renderer ---- */
+      const logEl = document.getElementById('session-log');
+      const logEmptyEl = document.getElementById('log-empty');
+      const sessionTimeEl = document.getElementById('session-time');
+      const sessionDateEl = document.getElementById('session-date');
+
+      // Set date once
+      const now = new Date();
+      sessionDateEl.textContent = now.toISOString().slice(0, 10);
+
+      function renderLogRow(event) {
+        if (logEmptyEl && logEmptyEl.parentNode) {
+          logEmptyEl.remove();
+        }
+        const li = document.createElement('li');
+        li.className = 'log-row';
+        const typeClass = event.type.toLowerCase();
+        li.innerHTML = `
+          <span class="log-time">${event.time}</span>
+          <span class="log-type ${typeClass}">${event.type}</span>
+          <span class="log-target">${event.target}</span>
+        `;
+        logEl.appendChild(li);
+      }
+
+      function updateSummary() {
+        document.getElementById('stat-events').textContent = session.events.length;
+        document.getElementById('stat-sections').textContent = session.sectionsSeen.size;
+        document.getElementById('stat-flags').textContent = session.flagCount;
+
+        // Attention score: crude heuristic. Starts at 100, loses points
+        // for flagged events (fast scrolls, no-clicks) and missed sections.
+        // Adds points for section-visits and long dwells.
+        if (session.events.length === 0) {
+          document.getElementById('stat-score').textContent = '—';
+          return;
+        }
+        const sectionPoints = session.sectionsSeen.size * 12;
+        const eventPoints = Math.min(40, session.events.length * 2);
+        const flagPenalty = session.flagCount * 8;
+        const score = Math.max(10, Math.min(100, 40 + sectionPoints + eventPoints - flagPenalty));
+        document.getElementById('stat-score').textContent = `${score}%`;
+      }
+
+      // Session timer ticker
+      setInterval(() => {
+        sessionTimeEl.textContent = fmtTime(Date.now() - sessionStart);
+      }, 1000);
+
+      /* ---- wire up: bird slot transitions trigger highlights + logs ---- */
+      const SLOT_TO_SECTION = {
+        '1': 'hero', '2': 'observe', '3': 'control', '4': 'improve', '5': 'closer',
+      };
+
+      // Wrap moveToSlot to log its transitions
+      const originalMoveToSlot = moveToSlot;
+      moveToSlot = function(slot) {
+        const sectionName = SLOT_TO_SECTION[slot];
+        if (sectionName && !session.sectionsSeen.has(sectionName)) {
+          session.sectionsSeen.add(sectionName);
+          logEvent('OBSERVED', `Entered section: <span class="hl">${sectionName}</span>`);
+        }
+        originalMoveToSlot(slot);
+        // Highlight the new slot's targets after the bird lands
+        setTimeout(() => highlightForSlot(slot), 880);
+      };
+
+      /* ---- scroll velocity detection — flag fast scrolls ---- */
+      let lastScrollY = window.scrollY;
+      let lastScrollT = Date.now();
+      let fastScrollFlagTimer = null;
+
+      window.addEventListener('scroll', () => {
+        const now = Date.now();
+        const dt = now - lastScrollT;
+        const dy = Math.abs(window.scrollY - lastScrollY);
+        if (dt > 0) {
+          const velocity = dy / dt; // px per ms
+          session.scrollVelocityHistory.push(velocity);
+          if (session.scrollVelocityHistory.length > 10) {
+            session.scrollVelocityHistory.shift();
+          }
+          // Fast scroll threshold: > 4 px/ms sustained
+          if (velocity > 4 && !fastScrollFlagTimer) {
+            fastScrollFlagTimer = setTimeout(() => {
+              if (session.currentSection) {
+                logEvent('FLAGGED', `Fast scroll detected — may have skimmed content`);
+              }
+              fastScrollFlagTimer = null;
+            }, 200);
+          }
+        }
+        lastScrollY = window.scrollY;
+        lastScrollT = now;
+      }, { passive: true });
+
+      /* ---- stat hover tracking ---- */
+      document.querySelectorAll('[data-stat-highlight]').forEach((el) => {
+        const id = el.getAttribute('data-stat-highlight');
+        let hoverStart = null;
+        el.addEventListener('mouseenter', () => {
+          hoverStart = Date.now();
+          el.classList.add('highlighted');
+        });
+        el.addEventListener('mouseleave', () => {
+          el.classList.remove('highlighted');
+          if (hoverStart) {
+            const dwell = Date.now() - hoverStart;
+            if (dwell > 800) {
+              logEvent('OBSERVED', `Dwelled on stat: <span class="hl">${el.textContent.trim()}</span> (${(dwell/1000).toFixed(1)}s)`);
+            }
+          }
+          hoverStart = null;
+        });
+      });
+
+      /* ---- CTA click tracking ---- */
+      document.querySelectorAll('[data-highlight="closer.cta"]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          logEvent('BLOCKED', `CTA clicked but no waitlist form rendered yet (prototype limitation)`);
+          setTimeout(() => {
+            logEvent('SUGGESTED', `Wire up form submission — user is ready to convert`);
+          }, 1200);
+        });
+      });
+
+      /* ---- pattern detection: fire funny observations periodically ---- */
+      function maybeEmitPatternObservation() {
+        const total = session.events.length;
+        // After N events fire some observations
+        if (total === 3 && !session._p3) {
+          session._p3 = true;
+          logEvent('LEARNED', `Reading pattern: top-to-bottom · standard trajectory`);
+        }
+        if (session.flagCount >= 2 && !session._pflags) {
+          session._pflags = true;
+          logEvent('SUGGESTED', `Consider slowing down — key details are in the detail section`);
+        }
+        if (session.sectionsSeen.size === 5 && !session._pall) {
+          session._pall = true;
+          logEvent('OBSERVED', `All sections visited · full page read completed`);
+        }
+      }
+
+      // Wrap logEvent to trigger pattern detection
+      const _origLog = logEvent;
+      logEvent = function(type, target) {
+        _origLog(type, target);
+        maybeEmitPatternObservation();
+      };
+
+      /* ---- initial session event ---- */
+      logEvent('OBSERVED', `Session opened · user landed on <span class="hl">canary-prototype</span>`);
+
+      /* ---- also log when user reaches the report itself ---- */
+      const reportEl = document.querySelector('.session-report');
+      if (reportEl) {
+        const io = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting && !session._reachedReport) {
+              session._reachedReport = true;
+              logEvent('LEARNED', `User reached session report · meta-joke landed`);
+            }
+          }
+        }, { threshold: 0.2 });
+        io.observe(reportEl);
+      }
+    </script>
+  </body>
+</html>

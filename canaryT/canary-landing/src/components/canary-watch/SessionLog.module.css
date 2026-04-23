@@ -1,0 +1,194 @@
+.section {
+  background: var(--black);
+  color: var(--text-white);
+  padding: 80px var(--space-8) 96px;
+}
+
+.inner {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid rgba(247, 247, 247, 0.15);
+  margin-bottom: var(--space-6);
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(247, 247, 247, 0.5);
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.liveDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--safe);
+  border-radius: 50%;
+  animation: cw-session-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+@keyframes cw-session-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+
+.meta {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: rgba(247, 247, 247, 0.45);
+  display: flex;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+.metaValue { color: rgba(247, 247, 247, 0.85); }
+
+.headline {
+  font-family: var(--font-sans);
+  font-size: clamp(1.5rem, 2vw + 0.5rem, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text-white);
+  margin-bottom: var(--space-2);
+}
+
+.sub {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: rgba(247, 247, 247, 0.55);
+  margin-bottom: var(--space-5);
+}
+
+.hint {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: rgba(247, 247, 247, 0.45);
+  border: 1px dashed rgba(247, 247, 247, 0.18);
+  padding: 10px 14px;
+  margin-bottom: var(--space-8);
+  line-height: 1.6;
+}
+
+.logScroll {
+  max-height: 320px;                 /* ~12 rows at 22-24px line height */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-right: var(--space-2);     /* room for scrollbar */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black 16px,
+    black calc(100% - 16px),
+    transparent 100%
+  );
+}
+.logScroll::-webkit-scrollbar {
+  width: 6px;
+}
+.logScroll::-webkit-scrollbar-thumb {
+  background: rgba(10, 10, 10, 0.15);
+  border-radius: 3px;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 104px 110px 1fr;
+  gap: var(--space-5);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(247, 247, 247, 0.08);
+  align-items: baseline;
+  opacity: 0;
+  transform: translateY(4px);
+  animation: cw-log-row-in 240ms ease-out forwards;
+}
+@keyframes cw-log-row-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.time {
+  color: rgba(247, 247, 247, 0.5);
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.type {
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+.typeObserved  { color: var(--safe); }
+.typeFlagged   { color: #C98A1C; }
+.typeBlocked   { color: var(--critical); }
+.typeLearned   { color: rgba(247, 247, 247, 0.75); }
+.typeSuggested { color: #6B6DDF; }
+
+.target { color: rgba(247, 247, 247, 0.88); }
+.hl     { color: var(--safe); }
+
+.empty {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: rgba(247, 247, 247, 0.35);
+  padding: 20px 0;
+}
+
+.summary {
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid rgba(247, 247, 247, 0.15);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-6);
+  font-family: var(--font-mono);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.statLabel {
+  font-size: 0.625rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(247, 247, 247, 0.5);
+}
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--text-white);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liveDot { animation: none; }
+  .row { animation: none; opacity: 1; transform: none; }
+}

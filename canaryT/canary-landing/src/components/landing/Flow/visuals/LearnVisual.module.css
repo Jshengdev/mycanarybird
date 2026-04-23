@@ -1,0 +1,160 @@
+.wrap {
+  position: absolute;
+  inset: 0;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  color: var(--text-black);
+}
+
+/* Replay video fills the panel; the "Add rule" button floats above it. */
+.replay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Floating variant of .addBtn — anchored to the bottom-right of the panel
+   so it sits above the replay video. The bird perches on top of this
+   button via the mascot's perchRef wiring. */
+.addBtnFloating {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: 1;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--grey-stroke);
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--icon-grey);
+}
+
+.headerLeft {
+  font-weight: 600;
+  color: var(--text-black);
+}
+
+.cards {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-4);
+  background: var(--card-bg);
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.cardActive {
+  border-color: var(--accent-color);
+  background: #FAFAFF;
+}
+
+.cardAdded {
+  border-color: var(--safe);
+  background: #F8FCF9;
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.cardName {
+  font-size: 0.8125rem;
+  color: var(--accent-color);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardNameAdded {
+  color: var(--safe);
+}
+
+.cardConfidence {
+  font-size: 0.6875rem;
+  color: var(--icon-grey);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardReason {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--icon-grey);
+  line-height: 1.45;
+}
+
+.addBtn {
+  align-self: flex-end;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  background: var(--accent-color);
+  color: var(--text-white);
+  border: 1px solid var(--accent-color);
+  border-radius: var(--radius-btn);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  position: relative;
+}
+
+.addBtnPulse::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--radius-btn);
+  border: 1.5px solid var(--accent-color);
+  animation: lvPulse 1600ms ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes lvPulse {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.18); }
+}
+
+.addBtnAdded {
+  background: var(--safe);
+  border-color: var(--safe);
+}
+
+.check {
+  display: inline-block;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .addBtnPulse::after { animation: none; opacity: 0; }
+}

@@ -1,0 +1,122 @@
+.frame {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  /* padding-left clears the ReelProgress sidebar (--space-8 left + dot + label).
+     160px is a calibrated value, not a token-derived sum. */
+  padding: var(--space-12) var(--space-16) var(--space-12) 160px;
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out-quart);
+  pointer-events: none;
+}
+
+.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.copyColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 480px;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--icon-grey);
+  margin-bottom: var(--space-6);
+}
+
+.headline {
+  font-family: var(--font-sans);
+  font-size: clamp(1.75rem, 2.2vw + 0.5rem, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  color: var(--text-black);
+  text-wrap: balance;
+  margin-bottom: var(--space-6);
+}
+
+.body {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--icon-grey);
+  max-width: 52ch;
+}
+
+.stat {
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--grey-stroke);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--text-black);
+  line-height: 1;
+}
+
+.statCaption {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--icon-grey);
+  max-width: 32ch;
+  line-height: 1.4;
+}
+
+.visualColumn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+.visualContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--card-gradient);
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: 0 20px 40px -20px rgba(10, 10, 10, 0.08);
+}
+
+.scanline {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    var(--scanline-overlay) 3px,
+    var(--scanline-overlay) 4px
+  );
+}
+
+@media (max-width: 900px) {
+  .frame {
+    grid-template-columns: 1fr;
+    padding: var(--space-10) var(--space-5);
+    gap: var(--space-8);
+  }
+  .visualColumn {
+    padding: 0;
+  }
+}

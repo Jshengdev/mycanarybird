@@ -1,0 +1,71 @@
+.hero {
+  position: relative;
+  min-height: 100dvh;  /* taste-skill §2: NEVER use h-screen (iOS Safari bug) */
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: var(--space-16) var(--space-8) var(--space-16) var(--space-10);
+}
+
+.liveBadge {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  z-index: 2;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin-top: 80px; /* pull up from dead center */
+}
+
+.headline {
+  font-family: var(--font-sans);
+  font-size: clamp(2.75rem, 4.5vw + 0.5rem, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: var(--text-black);
+  text-wrap: balance;
+}
+
+.subtitle {
+  font-family: var(--font-sans);
+  font-size: clamp(1rem, 0.9vw + 0.5rem, 1.125rem);
+  font-weight: 400;
+  color: var(--icon-grey);
+  letter-spacing: -0.005em;
+  line-height: 1.6;
+  margin-top: var(--space-6);
+  max-width: 52ch;
+}
+
+.ctaRow {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-10);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  padding: 0 36px;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--space-16) var(--space-5) var(--space-12) var(--space-5);
+    align-items: flex-start;
+    padding-top: 120px;
+  }
+  .liveBadge {
+    top: 16px;
+    right: 16px;
+  }
+  .content {
+    margin-top: 0;
+  }
+}
