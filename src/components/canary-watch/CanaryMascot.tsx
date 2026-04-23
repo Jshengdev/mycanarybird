@@ -28,22 +28,53 @@ const BIRD_SIZE = 28;
 /** Matches `outline-offset` on `.cw-perched` — bird sits ON the outline. */
 const OUTLINE_OFFSET = 6;
 
-/** Base flight duration; scaled down for short hops in startFlight. */
-const FLIGHT_MAX_MS = 700;
-const FLIGHT_MIN_MS = 360;
+/** Base flight duration — slow and chill. Scaled further by distance. */
+const FLIGHT_MAX_MS = 1200;
+const FLIGHT_MIN_MS = 560;
 /** Below this linear distance, bird just snaps — no arc. */
 const FLIGHT_SNAP_DISTANCE_PX = 24;
 /** Landing wiggle duration (CSS animation). */
 const WIGGLE_DURATION_MS = 1000;
 
-const easeInOutCubic = (t: number): number =>
-  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+/**
+ * Fractions along the top edge the bird can hover at. Pure center (0)
+ * feels mechanical; off-center spots give each landing a different
+ * silhouette. Slot picked deterministically per perch element (see
+ * `perchSlotFor`) so revisiting a section parks the bird in the same
+ * spot instead of hopping around.
+ */
+const PERCH_SLOTS = [-0.32, -0.14, 0, 0.14, 0.32];
 
-/** Viewport coords where the bird sits ON TOP of `el`. */
+/** Cheap stable hash of a string — pinned on element id / text to pick
+ *  a `PERCH_SLOTS` index per perch. */
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function perchSlotFor(el: HTMLElement): number {
+  const key =
+    el.id ||
+    (el.getAttribute('data-section-id') ?? '') +
+      (el.textContent?.slice(0, 20) ?? '') +
+      el.tagName;
+  return PERCH_SLOTS[hashString(key) % PERCH_SLOTS.length];
+}
+
+/**
+ * eased sine — gentler than cubic, floaty takeoff and landing. The
+ * bird is never meant to feel in a hurry.
+ */
+const easeInOutSine = (t: number): number =>
+  -(Math.cos(Math.PI * t) - 1) / 2;
+
+/** Viewport coords where the bird hovers above `el`. */
 function perchPos(el: HTMLElement): { x: number; y: number } {
   const r = el.getBoundingClientRect();
+  const slot = perchSlotFor(el);
   return {
-    x: r.left + r.width / 2 - BIRD_SIZE / 2,
+    x: r.left + r.width / 2 - BIRD_SIZE / 2 + r.width * slot,
     y: r.top - BIRD_SIZE - OUTLINE_OFFSET,
   };
 }
@@ -162,10 +193,12 @@ export function CanaryMascot() {
 
     const duration = Math.min(
       FLIGHT_MAX_MS,
-      Math.max(FLIGHT_MIN_MS, distance * 1.1 + 200)
+      Math.max(FLIGHT_MIN_MS, distance * 1.7 + 320)
     );
-    /** Parabolic arc amplitude — taller for longer flights, capped. */
-    const amplitude = Math.min(120, distance * 0.28);
+    /** Parabolic arc amplitude — taller for longer flights, capped.
+     *  Slightly over-lifted vs. a straight parabola so the bird reads as
+     *  taking its time, not racing from A to B. */
+    const amplitude = Math.min(180, distance * 0.38);
     const start = performance.now();
     /** Capture the target element so we re-read its rect on land (it may
      *  have scrolled during the flight). */
@@ -173,7 +206,7 @@ export function CanaryMascot() {
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      const e = easeInOutCubic(t);
+      const e = easeInOutSine(t);
       const x = from.x + (to.x - from.x) * e;
       const arcLift = 4 * e * (1 - e) * amplitude;
       const y = from.y + (to.y - from.y) * e - arcLift;
