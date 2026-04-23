@@ -1,16 +1,43 @@
-# React + Vite
+# mycanarybird
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Marketing landing page for **Canary** — a QA/observability SDK for computer-use AI agents.
 
-Currently, two official plugins are available:
+Live: https://mycanarybird.com
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## React Compiler
+Next.js 16 (App Router) · React 18 · Framer Motion · GSAP · CSS Modules · next/font
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Local development
 
-## Expanding the ESLint configuration
+```bash
+npm install
+npm run dev          # http://localhost:3000
+npm run build        # production build
+npm run lint
+npx tsc --noEmit     # type check
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Layout
+
+```
+src/
+  app/                # routes + globals.css (design tokens)
+  components/
+    landing/          # Hero, Reel, UseCases, Closer, etc.
+    canary-watch/     # mascot system (the bird)
+    nav/ ui/          # nav + shared primitives
+public/
+  demo/               # static export of the /demo dashboard
+docs/
+  design-system.md    # Figma-extracted tokens & components
+  polish/             # track briefs (ui, copy, bird)
+```
+
+## Deploy
+
+Hosted on Vercel (project `mycanarybird`). Push to `main` → preview; promote manually or `vercel --prod`.
+
+## Conventions
+
+See `CLAUDE.md` for design tokens, mascot behavior, polish track boundaries, and guardrails.
