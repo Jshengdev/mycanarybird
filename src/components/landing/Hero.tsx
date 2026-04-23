@@ -44,7 +44,7 @@ export function Hero() {
   );
 
   return (
-    <section className={styles.hero} ref={sectionRef}>
+    <section className={styles.hero} ref={sectionRef} data-snap>
       <motion.div
         className={styles.liveBadge}
         initial={{ opacity: 0 }}

@@ -148,6 +148,7 @@ export function SessionLog() {
       ref={sectionRef}
       className={`${styles.section} cw-dark-perch`}
       data-section-name="session-log"
+      data-snap
     >
       <div className={styles.inner}>
         <div className={styles.header}>

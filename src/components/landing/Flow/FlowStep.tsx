@@ -131,6 +131,7 @@ export function FlowStep({
     <motion.div
       ref={sectionRef}
       className={classes}
+      data-snap
       variants={reduce ? undefined : staggerParent}
       initial={reduce ? undefined : 'hidden'}
       whileInView={reduce ? undefined : 'visible'}

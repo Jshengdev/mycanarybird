@@ -65,6 +65,7 @@ export function ViewSource() {
       ref={sectionRef}
       className={styles.section}
       data-revealed={revealed ? 'true' : 'false'}
+      data-snap
     >
       <motion.div
         className={styles.inner}

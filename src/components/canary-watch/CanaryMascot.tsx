@@ -55,9 +55,17 @@ const BIRD_SIZE = 28;
 const OUTLINE_OFFSET = 6;
 
 const SWITCH_HYSTERESIS_PX = 60;
-const SCROLL_IDLE_MS = 180;
-const TRAVEL_MS = 820;
+const SCROLL_IDLE_MS = 80;
 const WIGGLE_DURATION_MS = 1200;
+
+/** Flight duration clamp — short hops stay snappy, long flights stay readable. */
+const FLIGHT_MIN_MS = 400;
+const FLIGHT_MAX_MS = 900;
+/** Distance below which the bird just snaps — no flight, no arc. */
+const FLIGHT_SNAP_DISTANCE_PX = 24;
+
+const easeInOutCubic = (t: number): number =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
 /** Bounce physics (flow-stop). px per second, constant magnitude. */
 const BOUNCE_SPEED = 120;
@@ -117,17 +125,34 @@ export function CanaryMascot() {
   /** Which SVG the phantom-pointer is showing right now. */
   const [pointerVariant, setPointerVariant] = useState<'arrow' | 'hand'>('arrow');
 
-  /** Traveling — true for ~820ms after the active section changes. Enables
-   *  the `.mascot.traveling` CSS transition so the bird glides from old
-   *  perch to new perch instead of snapping. Outside this window the bird
-   *  snaps each rAF tick (sticky-to-perch). */
-  const [traveling, setTraveling] = useState(false);
+  /** Flying — true while the arc-path rAF driver owns the bird's position,
+   *  from the moment a new perch is committed until the bird lands. The
+   *  driver renders an ease-in-out arc (parabolic lift) instead of a
+   *  straight-line CSS tween, and tilts `.inner` toward the travel
+   *  direction for a flight pose. */
+  const [flying, setFlying] = useState(false);
 
   /** Timer refs — all cleared on unmount to avoid orphaned setState calls. */
   const cascadeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cineTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const wiggleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const arriveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const firstPlacementTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Arc-flight state. When non-null, the driver owns the bird's position
+   * (recalcPosition early-returns). A single rAF drives ease-in-out-cubic
+   * progress across a parabolic arc; amplitude scales with distance so
+   * short hops stay low and long flights visibly lift.
+   */
+  const flightRef = useRef<{
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    start: number;
+    duration: number;
+    amplitude: number;
+    raf: number;
+    perchEl: HTMLElement | null;
+  } | null>(null);
 
   /** One-shot guards — each cinematic fires at most once per session. */
   const demoPlayedRef = useRef(false);
@@ -147,7 +172,6 @@ export function CanaryMascot() {
   /** Triggers a re-render when birdAnchorRef changes so recalc picks it up. */
   const [, setBirdAnchorTick] = useState(0);
 
-  const perchOriginXRef = useRef<number | null>(null);
   const firstPlacementRef = useRef(true);
 
   /** Element carrying the `.cw-perched` outline right now. */
@@ -195,6 +219,106 @@ export function CanaryMascot() {
       setWiggle(false);
       wiggleTimerRef.current = null;
     }, WIGGLE_DURATION_MS);
+  };
+
+  /** Cancel any in-flight arc. Safe to call when no flight is active. */
+  const cancelFlight = () => {
+    const f = flightRef.current;
+    if (f) {
+      cancelAnimationFrame(f.raf);
+      flightRef.current = null;
+    }
+    setFlying(false);
+  };
+
+  /**
+   * Start an arc-path flight to `to`, landing on `perchEl`. Duration and
+   * arc amplitude both scale with linear distance; facing direction is
+   * pre-committed from the horizontal delta so it doesn't flicker mid-air.
+   *
+   * Skipped (snaps instead) when: reduced-motion is on, the cursor-actor
+   * is driving position (`birdHeldPos`), bounce physics owns position
+   * (`flow-stop`), there's no previous position to fly from, or the hop
+   * is below the snap-distance threshold. Also snaps + delays a one-shot
+   * wiggle on the very first placement so the bird doesn't fly from the
+   * viewport corner.
+   */
+  const startFlight = (
+    to: { x: number; y: number },
+    perchEl: HTMLElement | null
+  ) => {
+    if (reduce || birdHeldPos || activeSectionId === 'flow-stop') {
+      cancelFlight();
+      commitPos(to.x, to.y);
+      if (perchEl) lockPerchOutline(perchEl);
+      return;
+    }
+    const from = posRef.current;
+    if (!from || firstPlacementRef.current) {
+      cancelFlight();
+      commitPos(to.x, to.y);
+      firstPlacementRef.current = false;
+      if (firstPlacementTimerRef.current) clearTimeout(firstPlacementTimerRef.current);
+      firstPlacementTimerRef.current = setTimeout(() => {
+        fireWiggle();
+        if (perchEl) lockPerchOutline(perchEl);
+        firstPlacementTimerRef.current = null;
+      }, 240);
+      return;
+    }
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.hypot(dx, dy);
+    if (distance < FLIGHT_SNAP_DISTANCE_PX) {
+      cancelFlight();
+      commitPos(to.x, to.y);
+      if (perchEl) lockPerchOutline(perchEl);
+      return;
+    }
+
+    const duration = Math.min(
+      FLIGHT_MAX_MS,
+      Math.max(FLIGHT_MIN_MS, distance * 1.3 + 260)
+    );
+    const amplitude = Math.min(140, distance * 0.32);
+
+    if (dx < -6) setFacing('left');
+    else if (dx > 6) setFacing('right');
+
+    cancelFlight();
+    setFlying(true);
+
+    const tick = (now: number) => {
+      const f = flightRef.current;
+      if (!f) return;
+      const t = Math.min(1, (now - f.start) / f.duration);
+      const e = easeInOutCubic(t);
+      const x = f.from.x + (f.to.x - f.from.x) * e;
+      /** Parabolic lift — 0 at both endpoints, peaks at t=0.5. */
+      const arc = 4 * e * (1 - e) * f.amplitude;
+      const y = f.from.y + (f.to.y - f.from.y) * e - arc;
+      commitPos(x, y);
+      if (t < 1) {
+        f.raf = requestAnimationFrame(tick);
+      } else {
+        flightRef.current = null;
+        setFlying(false);
+        fireWiggle();
+        if (f.perchEl) lockPerchOutline(f.perchEl);
+      }
+    };
+
+    const raf = requestAnimationFrame(tick);
+    flightRef.current = {
+      from: { x: from.x, y: from.y },
+      to: { x: to.x, y: to.y },
+      start: performance.now(),
+      duration,
+      amplitude,
+      raf,
+      perchEl,
+    };
   };
 
   /** Which section is closest to the reading focus line. */
@@ -247,6 +371,7 @@ export function CanaryMascot() {
    *      so its body sits exactly on the outline rendered by `.cw-perched`.
    */
   const recalcPosition = () => {
+    if (flightRef.current) return;
     if (birdHeldPos) {
       commitPos(birdHeldPos.x, birdHeldPos.y);
       return;
@@ -347,20 +472,10 @@ export function CanaryMascot() {
     return () => cancelAnimationFrame(raf);
   }, [activeSectionId, reduce]);
 
-  // Traveling window — set true on every active-section change so the
-  // `.mascot.traveling` CSS transition engages for the flight. After
-  // TRAVEL_MS, clear it so the bird goes back to per-frame snap-tracking.
+  // Section-change cleanup — whenever we leave flow-install, drop the
+  // post-cinematic anchor and the cage outline so the bird can perch
+  // normally in the next section.
   useEffect(() => {
-    if (!activeSectionId) return;
-    setTraveling(true);
-    const t = setTimeout(() => setTraveling(false), TRAVEL_MS);
-    return () => clearTimeout(t);
-  }, [activeSectionId]);
-
-  // Active section changed — fly to the new perch and wiggle on arrival.
-  useEffect(() => {
-    // Clear the post-cinematic anchor + cage class whenever we leave
-    // flow-install so the bird can perch normally in the next section.
     if (activeSectionId !== 'flow-install') {
       birdAnchorRef.current = null;
       if (cagedFrameElRef.current) {
@@ -368,54 +483,39 @@ export function CanaryMascot() {
         cagedFrameElRef.current = null;
       }
     }
-
-    const active = sections.find((s) => s.id === activeSectionId);
-    if (!active) return;
-    const perchEl =
-      perchOverrides.get(active.id) ?? active.perchAnchor ?? active.anchor;
-    if (!perchEl) return;
-    const rect = perchEl.getBoundingClientRect();
-    const nextOriginX = rect.left + rect.width / 2 - BIRD_SIZE / 2;
-
-    if (perchOriginXRef.current !== null) {
-      if (nextOriginX < perchOriginXRef.current - 4) setFacing('left');
-      else if (nextOriginX > perchOriginXRef.current + 4) setFacing('right');
-    }
-    perchOriginXRef.current = nextOriginX;
-
-    recalcPosition();
-
-    if (arriveTimerRef.current) clearTimeout(arriveTimerRef.current);
-    const delay = firstPlacementRef.current ? 240 : TRAVEL_MS;
-    firstPlacementRef.current = false;
-    arriveTimerRef.current = setTimeout(() => {
-      fireWiggle();
-      lockPerchOutline(perchEl);
-      arriveTimerRef.current = null;
-    }, delay);
-
-    return () => {
-      if (arriveTimerRef.current) clearTimeout(arriveTimerRef.current);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSectionId, perchOverrides]);
+  }, [activeSectionId]);
 
-  // In-section perch changes (e.g. UseCases active tab swaps, or Install's
-  // numberRow → visualFrame after the cinematic). Same activeSectionId but
-  // a different perchAnchor — move the outline to the new element.
+  // Single flight trigger — fires whenever the active perch element
+  // changes, whether that's a section switch (flow-install → flow-see)
+  // or an intra-section perch hop (UseCases tab 1 → tab 2). The flight
+  // driver handles facing, wiggle, and perch-outline locking on land.
   const activePerchAnchor =
     sections.find((s) => s.id === activeSectionId)?.perchAnchor ?? null;
+  /**
+   * `perchOverrides` is the Shift+click override map; when an entry exists
+   * for the active section we prefer it. Read inline so a newly-set
+   * override re-runs the flight effect.
+   */
+  const overrideForActive = activeSectionId
+    ? perchOverrides.get(activeSectionId) ?? null
+    : null;
+  const effectivePerch = overrideForActive ?? activePerchAnchor;
+
   useEffect(() => {
-    if (!activePerchAnchor) return;
-    // birdAnchorRef overrides — don't touch the outline while we're
-    // anchored to the post-cinematic panel.
+    if (!effectivePerch) return;
+    // Post-cinematic Install anchor pins the bird inside the panel — don't
+    // override that with the section's default perchAnchor.
     if (birdAnchorRef.current) return;
-    const handoff = setTimeout(() => {
-      lockPerchOutline(activePerchAnchor);
-    }, TRAVEL_MS);
-    return () => clearTimeout(handoff);
+
+    const rect = effectivePerch.getBoundingClientRect();
+    const target = {
+      x: rect.left + rect.width / 2 - BIRD_SIZE / 2,
+      y: rect.top - BIRD_SIZE - OUTLINE_OFFSET,
+    };
+    startFlight(target, effectivePerch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePerchAnchor]);
+  }, [effectivePerch]);
 
   // BLOCKED alert — bird flaps immediately when a policy violation fires.
   useEffect(() => {
@@ -465,7 +565,8 @@ export function CanaryMascot() {
       cineTimersRef.current.forEach(clearTimeout);
       cineTimersRef.current = [];
       if (wiggleTimerRef.current) clearTimeout(wiggleTimerRef.current);
-      if (arriveTimerRef.current) clearTimeout(arriveTimerRef.current);
+      if (firstPlacementTimerRef.current) clearTimeout(firstPlacementTimerRef.current);
+      cancelFlight();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -712,7 +813,7 @@ export function CanaryMascot() {
           styles.mascot,
           facing === 'left' ? styles.faceLeft : '',
           wiggle ? styles.wiggle : '',
-          traveling ? styles.traveling : '',
+          flying ? styles.flying : '',
           bouncing ? styles.bouncing : '',
           birdHeldPos ? styles.held : '',
           cinePhase !== 'idle' ? styles.cinePlay : '',

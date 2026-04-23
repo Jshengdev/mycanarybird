@@ -36,7 +36,7 @@ export function Closer() {
   );
 
   return (
-    <section ref={sectionRef} className={styles.closer}>
+    <section ref={sectionRef} className={styles.closer} data-snap>
       <motion.div
         className={styles.inner}
         initial={reduce ? undefined : { opacity: 0, y: 16 }}

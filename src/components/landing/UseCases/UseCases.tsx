@@ -79,7 +79,7 @@ export function UseCases() {
   };
 
   return (
-    <section ref={sectionRef} className={styles.section} id="use-cases">
+    <section ref={sectionRef} className={styles.section} id="use-cases" data-snap>
       <div className={styles.inner}>
         <h2
           ref={highlight('heading')}

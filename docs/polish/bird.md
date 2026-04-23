@@ -21,7 +21,7 @@ Your work has two halves: **motion/perch behavior** (how the bird moves) and **s
 - Perch wiring points in other sections — i.e. where `useCanarySection`'s `perchRef` is attached. You can move a perch inside a section if a better eye-path target exists. Sections currently wired:
   - `Nav.tsx` — NOT a perch (don't re-add)
   - `Hero.tsx` — perches on `<h1>`
-  - `Reel/Reel.tsx` + `FrameObserve/Control/Improve.tsx` — perch cycles with active frame
+  - `Flow/Flow.tsx` + `FrameObserve/Control/Improve.tsx` — perch cycles with active frame
   - `UseCases/UseCases.tsx` + `UseCaseContent.tsx` — alternates between active tab and visual box
   - `Closer.tsx` — perches on `Get early access` submit button
   - `SessionLog.tsx` — perches on "Caught you." headline
@@ -71,11 +71,11 @@ CSS animations in `CanaryMascot.module.css`:
 1. Validate the eye-path perch chain walks the way a reader's eye actually does. For each perch, watch a first-time reader — does the bird arrive where their eye already is, or slightly ahead, or slightly behind?
 2. Hero: does the headline perch feel right, or should it be on the `Get early access` CTA after the headline settles?
 3. UseCases: the tab→visual alternation fires on a 2.2s timer. Should it key off scroll-settling instead of timer?
-4. Reel Improve: only the first suggested rule is a perch. Consider rotating through all three over time — it'd mirror the "Canary is learning" theme.
+4. Flow Improve: only the first suggested rule is a perch. Consider rotating through all three over time — it'd mirror the "Canary is learning" theme.
 
 ## Constraints
 
-- **No new dependencies.** Framer for UI, GSAP for Reel only, vanilla `setTimeout`/`requestAnimationFrame` for canary-watch.
+- **No new dependencies.** Framer for UI, GSAP for Flow only, vanilla `setTimeout`/`requestAnimationFrame` for canary-watch.
 - **Animation primitives**: `transform` and `opacity` only. Never animate `top/left/width/height`.
 - **Performance**: the scroll handler runs on every rAF during scroll. Keep it cheap — no new DOM queries per frame; cache what you can.
 - **Reduced motion**: every motion addition needs a `prefers-reduced-motion: reduce` fallback. The bird should still *work* in reduced motion, just without the physics.
@@ -91,7 +91,7 @@ CSS animations in `CanaryMascot.module.css`:
 5. Commit small. Convention: `polish(bird): <concern>`. Examples:
    - `polish(bird): randomize sway phase per perch to kill loop feel`
    - `polish(bird): fire LEARNED on use-case tab cycle`
-6. Push to `feat/landing-redesign`.
+6. Push to `main`.
 
 ## Rules of engagement
 

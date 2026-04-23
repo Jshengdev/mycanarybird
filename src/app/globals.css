@@ -118,6 +118,24 @@ html {
   -moz-osx-font-smoothing: grayscale;
   font-kerning: normal;
   text-rendering: optimizeLegibility;
+
+  /* One-swipe-per-idea. Each section marked `[data-snap]` (see below) is a
+     mandatory stop point; `scroll-snap-stop: always` prevents big swipes
+     from skipping multiple ideas. Nav clearance via scroll-padding-top. */
+  scroll-snap-type: y mandatory;
+  scroll-padding-top: 72px;
+}
+
+[data-snap] {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-snap-type: none;
+    scroll-behavior: auto;
+  }
 }
 
 body {

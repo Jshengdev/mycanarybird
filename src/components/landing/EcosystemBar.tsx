@@ -15,7 +15,7 @@ const FRAMEWORKS = [
  */
 export function EcosystemBar() {
   return (
-    <section className={styles.bar} aria-label="Supported agent frameworks">
+    <section className={styles.bar} aria-label="Supported agent frameworks" data-snap>
       <div className={styles.row}>
         <span className={styles.prefix}>Built for</span>
         {FRAMEWORKS.map((fw) => (
