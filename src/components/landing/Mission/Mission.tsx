@@ -43,7 +43,7 @@ export function Mission() {
           className={styles.heading}
           ref={perchRef as unknown as Ref<HTMLHeadingElement>}
         >
-          AI moves faster than our ability to guide it.
+          AI moves faster than our <em className={styles.emphasis}>ability</em> to guide it.
         </h2>
 
         <p className={styles.lede}>

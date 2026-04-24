@@ -12,17 +12,20 @@
 
   /* ── COLORS ─────────────────────────────────────────────── */
 
-  /* Core palette */
+  /* Core palette — warm-paper cast, inspired by wgb.agency's cream canvas.
+     All grays shifted from cool (blue-leaning) to warm (peach-leaning)
+     so 1px strokes and hovers read as part of the same paper, not floating
+     on top of it. */
   --black:          #0A0A0A;
   --text-black:     #0A0A0A;
-  --text-white:     #F7F7F7;
-  --icon-grey:      #5A5A7A;
-  --grey-stroke:    #DCDCE8;
-  --hover-gray:     #F5F5F8;
-  --pressed-gray:   #EDEDF2;
-  --bg:             #F5F5F8;
-  --card-bg:        #FAFAFA;
-  --sidebar-bg:     #FAFAFA;
+  --text-white:     #FFF5EF;
+  --icon-grey:      #6B5F55;
+  --grey-stroke:    #E4DBD0;
+  --hover-gray:     #F5ECE3;
+  --pressed-gray:   #EDE3D8;
+  --bg:             #FFF5EF;
+  --card-bg:        #FBF6EE;
+  --sidebar-bg:     #FBF6EE;
 
   /* Status */
   --critical:       #B84040;
@@ -39,7 +42,7 @@
   --gradient-border-active-vertical: linear-gradient(180deg, #0B0DC4 0%, #6B6DDF 100%);
 
   /* Grays */
-  --gray-100:       #F5F5F8;
+  --gray-100:       #F5ECE3;
 
   /* ── SPACING ─────────────────────────────────────────────── */
 

@@ -69,7 +69,7 @@ export function Hero() {
         >
           The trust layer for
           <br />
-          autonomous agents.
+          <em className={styles.emphasis}>autonomous</em> agents.
           <HeroCursor />
         </motion.h1>
 
