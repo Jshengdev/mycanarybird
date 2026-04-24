@@ -1,7 +1,6 @@
 'use client';
 
 import { FlowStep } from './FlowStep';
-import { FlowIntroSteps } from './FlowIntroSteps';
 import { makeVideoVisual } from './visuals/VideoVisual';
 import styles from './Flow.module.css';
 
@@ -23,24 +22,6 @@ export function Flow() {
   return (
     <section className={styles.section} id="how-it-works">
       <div className={styles.inner}>
-        <header className={styles.sectionHeader} data-snap>
-          <div className={styles.sectionHeaderInner}>
-            <span className={styles.eyebrow}>
-              <span className={styles.eyebrowRule} aria-hidden="true" />
-              HOW CANARY WORKS
-            </span>
-            <h2 className={styles.heading}>
-              One session. Four moves. Every agent safer than the last.
-            </h2>
-            <p className={styles.subheading}>
-              Canary watches what the agent does, blocks whatever you said
-              it can&apos;t, and drafts new rules each time it catches
-              something else.
-            </p>
-            <FlowIntroSteps />
-          </div>
-        </header>
-
         <div className={styles.steps}>
           <FlowStep
             sectionId="flow-install"

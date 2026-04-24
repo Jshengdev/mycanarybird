@@ -1,16 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { spring } from '@/lib/motion';
 import { EarlyAccessForm } from './EarlyAccessForm';
-import { useCanarySection } from '@/components/canary-watch';
+import { Button } from '@/components/ui/Button';
+import { useCanarySection, useCanaryWatch } from '@/components/canary-watch';
 import styles from './Closer.module.css';
 
 export function Closer() {
   // Treat null (SSR/unknown) as not-reduced; the actual preference is
   // applied on the next render after hydration. Matches Hero pattern.
   const reduce = useReducedMotion() === true;
+  const { logEvent } = useCanaryWatch();
 
   const { ref: sectionRef, perchRef, highlight } = useCanarySection({
     id: 'closer',
@@ -19,21 +21,32 @@ export function Closer() {
   });
 
   // Round B: the bird perches on the "Get early access" CTA (top-of-box).
-  // The submit button's ref is forwarded into the form and registered as
-  // the section's perchAnchor — the mascot's default perch math lands the
-  // bird directly on top of it.
   const submitRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     perchRef(submitRef.current);
   }, [perchRef]);
 
-  // Stable combined ref for the headline (highlight-only; not a perch).
   const headlineRef = useCallback(
     (el: HTMLElement | null) => {
       highlight('headline')(el);
     },
     [highlight]
   );
+
+  /** "View source code" side gag — click attempts to pull the repo, Canary
+   *  blocks it and logs the attempt to the Session Log. Ported here from
+   *  the removed ViewSource section so the final swipe is the logs. */
+  const [sourceBlocked, setSourceBlocked] = useState(false);
+  const sourceLoggedRef = useRef(false);
+  const handleViewSource = () => {
+    if (sourceLoggedRef.current) return;
+    sourceLoggedRef.current = true;
+    logEvent(
+      'BLOCKED',
+      'Access source code attempt · policy: source code withheld'
+    );
+    setSourceBlocked(true);
+  };
 
   return (
     <section ref={sectionRef} className={styles.closer} data-snap>
@@ -64,6 +77,25 @@ export function Closer() {
         >
           <EarlyAccessForm submitRef={submitRef} />
         </motion.div>
+
+        <div className={styles.sourceRow}>
+          <Button
+            variant="secondary"
+            size="md"
+            plus
+            onClick={handleViewSource}
+            disabled={sourceBlocked}
+            aria-live="polite"
+          >
+            View source code
+          </Button>
+          {sourceBlocked && (
+            <span className={styles.blockedMsg} role="status" aria-live="polite">
+              <span className={styles.blockedDot} aria-hidden="true" />
+              BLOCKED · Canary caught the attempt.
+            </span>
+          )}
+        </div>
       </motion.div>
     </section>
   );

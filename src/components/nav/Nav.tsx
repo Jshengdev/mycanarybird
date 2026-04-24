@@ -12,12 +12,12 @@ import styles from './Nav.module.css';
 export function Nav() {
   return (
     <nav className={styles.nav} aria-label="Primary">
-      {/* Left: logo + wordmark */}
-      <div className={styles.navLeft}>
+      {/* Left: logo + wordmark — routes to the home page. */}
+      <Link href="/" className={styles.navLeft} aria-label="Canary — home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/canarylogo.svg" alt="Canary" style={{ height: 16 }} />
+        <img src="/canarylogo.svg" alt="" style={{ height: 16 }} />
         <span className={styles.wordmark}>CANARY</span>
-      </div>
+      </Link>
 
       {/* Right: nav links + CTA */}
       <div className={styles.navRight}>

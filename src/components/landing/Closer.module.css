@@ -41,6 +41,33 @@
   width: 100%;
 }
 
+.sourceRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.blockedMsg {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--critical);
+}
+
+.blockedDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--critical);
+  display: inline-block;
+}
+
 @media (max-width: 768px) {
   .closer {
     padding: var(--space-12) var(--space-5);
