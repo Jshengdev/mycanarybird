@@ -2,11 +2,15 @@
 
 import { FlowStep } from './FlowStep';
 import { FlowIntroSteps } from './FlowIntroSteps';
-import { InstallVisual } from './visuals/InstallVisual';
-import { SeeVisual } from './visuals/SeeVisual';
-import { StopVisual } from './visuals/StopVisual';
-import { LearnVisual } from './visuals/LearnVisual';
+import { makeVideoVisual } from './visuals/VideoVisual';
 import styles from './Flow.module.css';
+
+/** Module-scope wrappers so FlowStep's `Visual` prop has stable component
+ *  identity — inline arrow factories would remount the video every render. */
+const InstallVisual = makeVideoVisual('/videos/integrate.mov');
+const SeeVisual = makeVideoVisual('/videos/sessions.mov');
+const StopVisual = makeVideoVisual('/videos/rules2.mov');
+const LearnVisual = makeVideoVisual('/videos/insights2.mov');
 
 /**
  * Flow — four-step arc of the Canary product: Install → See → Stop → Learn.
