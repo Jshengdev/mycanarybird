@@ -251,14 +251,23 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
     if (!activeSectionId) return;
     const section = sectionsRef.current.find((s) => s.id === activeSectionId);
     const sectionName = section?.displayName ?? activeSectionId;
-    if (!seenRef.current.has(activeSectionId)) {
+    const isFirstVisit = !seenRef.current.has(activeSectionId);
+
+    if (isFirstVisit) {
       seenRef.current.add(activeSectionId);
       setSectionsSeen(new Set(seenRef.current));
       if (section) {
         logEvent('OBSERVED', `Entered section · ${section.displayName}`);
-        triggerHighlight(activeSectionId);
       }
+    } else if (section) {
+      // Re-entry — reader came back to a section the bird already knows.
+      // Log it so the session feed reflects the round-trip.
+      logEvent('OBSERVED', `Re-entered · ${section.displayName}`);
     }
+    // Pulse the section's highlight every entry, first-visit or re-entry —
+    // gives the bird's arrival a visible landing moment on the UI itself.
+    triggerHighlight(activeSectionId);
+
     // Dwell timer — if reader stays on this section too long, flag it.
     const timer = setTimeout(() => {
       const secs = Math.round(DWELL_FLAG_MS / 1000);
