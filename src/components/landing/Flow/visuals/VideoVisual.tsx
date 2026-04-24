@@ -44,18 +44,22 @@ function VideoVisual({ src, perchRef }: VideoVisualProps) {
     perchRef(el);
   };
 
+  const mp4Src = src.replace(/\.mov$/, '.mp4');
+
   return (
     <video
       ref={setVideoRef}
       className={styles.video}
-      src={src}
       muted
       loop
       playsInline
       autoPlay={!reduce}
       preload="metadata"
       aria-hidden="true"
-    />
+    >
+      <source src={mp4Src} type="video/mp4" />
+      <source src={src} type="video/quicktime" />
+    </video>
   );
 }
 

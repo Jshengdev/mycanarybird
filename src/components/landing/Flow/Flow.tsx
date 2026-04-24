@@ -33,8 +33,9 @@ export function Flow() {
               One session. Four moves. Every agent safer than the last.
             </h2>
             <p className={styles.subheading}>
-              Canary is the trust layer that watches your agent, blocks the
-              action you flagged, and writes rules for what it sees next time.
+              Canary watches what the agent does, blocks whatever you said
+              it can&apos;t, and drafts new rules each time it catches
+              something else.
             </p>
             <FlowIntroSteps />
           </div>

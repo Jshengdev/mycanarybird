@@ -4,6 +4,7 @@ import { Hero } from "@/components/landing/Hero";
 import { Mission } from "@/components/landing/Mission/Mission";
 import { Flow } from "@/components/landing/Flow/Flow";
 import { UseCases } from "@/components/landing/UseCases/UseCases";
+import { ControlNow } from "@/components/landing/ControlNow/ControlNow";
 import { Closer } from "@/components/landing/Closer";
 import { ViewSource } from "@/components/landing/ViewSource/ViewSource";
 import {
@@ -21,6 +22,7 @@ export default function Home() {
         <Mission />
         <Flow />
         <UseCases />
+        <ControlNow />
         <Closer />
         <ViewSource />
       </main>
