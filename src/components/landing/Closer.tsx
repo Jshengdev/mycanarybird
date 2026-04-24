@@ -48,13 +48,12 @@ export function Closer() {
           ref={headlineRef}
           className={styles.headline}
         >
-          When we stop managing agents,
+          Every agent running itself
           <br />
-          every agent will need its own observability.
+          needs someone watching it.
         </h2>
         <p className={styles.subhead}>
-          This is what the future looks like — fully autonomous agents,
-          fully watched.
+          Watch. Block. Learn. Repeat.
         </p>
         <motion.div
           className={styles.formWrap}

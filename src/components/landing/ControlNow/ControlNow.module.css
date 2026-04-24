@@ -80,14 +80,6 @@
   margin-top: var(--space-5);
 }
 
-.emphasis {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  font-size: 1.04em;
-}
-
 .sub {
   font-family: var(--font-sans);
   font-size: 1.125rem;

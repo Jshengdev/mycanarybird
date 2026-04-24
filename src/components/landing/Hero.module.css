@@ -32,15 +32,6 @@
   text-wrap: balance;
 }
 
-/* Editorial italic-serif emphasis — the wgb.agency "growth" treatment.
-   Re-sized slightly up so the serif optical weight matches the sans body. */
-.emphasis {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  font-size: 1.04em;
-}
 
 .subtitle {
   font-family: var(--font-sans);

@@ -39,7 +39,7 @@ export function ControlNow() {
           ref={perchRef}
           className={styles.heading}
         >
-          You&rsquo;re in <em className={styles.emphasis}>control</em> now.
+          You&rsquo;re in control now.
         </h2>
         <p className={styles.sub}>
           Every action the agent takes gets watched as it happens, checked

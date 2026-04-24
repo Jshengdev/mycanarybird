@@ -69,7 +69,7 @@ export function Hero() {
         >
           The trust layer for
           <br />
-          <em className={styles.emphasis}>autonomous</em> agents.
+          autonomous agents.
           <HeroCursor />
         </motion.h1>
 
@@ -77,9 +77,9 @@ export function Hero() {
           className={styles.subtitle}
           variants={reduce ? undefined : staggerChild}
         >
-          Canary records what your agent does, and blocks anything you
-          tell it to. At the end of a session, it writes rules it thinks
-          you&apos;ll want. Install the SDK in five minutes.
+          Canary records what your agent does and blocks anything you
+          told it not to. After each session it drafts the next rule.
+          Five-minute install.
         </motion.p>
 
         <motion.div
