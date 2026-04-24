@@ -78,6 +78,11 @@ function fmtClockTime(ms: number): string {
 
 let nextEventId = 0;
 
+/** Hard cap on in-memory events so long sessions (or a hostile keystroke
+ *  flood) can't grow the log array without bound. 250 keeps the rolling
+ *  window comfortably longer than a typical reader session. */
+const MAX_EVENTS = 250;
+
 /**
  * Shallow-by-reference compare two focus-point arrays. null/null === equal.
  * Null vs array is NOT equal. Different lengths or any differing element
@@ -152,7 +157,12 @@ export function CanaryWatchProvider({ children }: { children: ReactNode }) {
       tOffset,
       time: fmtClockTime(tOffset),
     };
-    setEvents((prev) => [...prev, event]);
+    setEvents((prev) => {
+      const next = prev.length >= MAX_EVENTS
+        ? [...prev.slice(-(MAX_EVENTS - 1)), event]
+        : [...prev, event];
+      return next;
+    });
     // BLOCKED events pull the bird's attention — bird alerts.
     if (type === 'BLOCKED') setAlertKey((k) => k + 1);
   }, [sessionStart]);

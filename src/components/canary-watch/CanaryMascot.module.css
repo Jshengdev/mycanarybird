@@ -102,16 +102,6 @@
   100% { outline-offset: 4px;  outline-color: rgba(247, 247, 247, 0.55); }
 }
 
-/* Stat-hover highlight (used by useStatTracker — unrelated to flight). */
-:global(.cw-stat-hover) {
-  background: rgba(11, 13, 196, 0.07);
-  color: var(--accent-color);
-  padding: 1px 4px;
-  margin: -1px -4px;
-  border-radius: 2px;
-  transition: background 200ms ease, color 200ms ease;
-}
-
 /* Highlighted-on-entry target (pulse underline). */
 :global(.cw-highlighted) {
   position: relative;

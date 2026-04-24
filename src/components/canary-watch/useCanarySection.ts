@@ -111,22 +111,38 @@ export function useCanarySection(
   }, []);
 
   // When the highlight pulse targets this section, fire the highlights.
+  // All nested setTimeouts are tracked in `timers` and cleared on
+  // unmount or on the next pulse — without this, a quick re-entry to
+  // the same section while the previous animation is still running
+  // would stack overlapping class-mutation timers on detached elements.
   useEffect(() => {
     if (!highlightPulse || highlightPulse.sectionId !== opts.id) return;
     const entries = Array.from(highlightRefs.current.entries());
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
     entries.forEach(([, el], i) => {
       if (!el) return;
-      setTimeout(() => {
-        el.classList.remove('cw-fading');
-        el.classList.add('cw-highlighted');
+      timers.push(
         setTimeout(() => {
-          el.classList.add('cw-fading');
-          setTimeout(() => {
-            el.classList.remove('cw-highlighted', 'cw-fading');
-          }, HIGHLIGHT_FADE_MS);
-        }, HIGHLIGHT_DURATION_MS);
-      }, i * STAGGER_MS);
+          el.classList.remove('cw-fading');
+          el.classList.add('cw-highlighted');
+          timers.push(
+            setTimeout(() => {
+              el.classList.add('cw-fading');
+              timers.push(
+                setTimeout(() => {
+                  el.classList.remove('cw-highlighted', 'cw-fading');
+                }, HIGHLIGHT_FADE_MS)
+              );
+            }, HIGHLIGHT_DURATION_MS)
+          );
+        }, i * STAGGER_MS)
+      );
     });
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
   }, [highlightPulse, opts.id]);
 
   // Section root ref — updates anchor AND re-registers.

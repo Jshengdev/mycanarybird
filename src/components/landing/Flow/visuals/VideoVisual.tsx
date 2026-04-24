@@ -38,6 +38,26 @@ function VideoVisual({ src, perchRef }: VideoVisualProps) {
     }
   }, [reduce]);
 
+  // Defensive unmount cleanup — pause the video, drop its src, and call
+  // `load()` so the decoder releases the buffered frames. Without this,
+  // Safari + Chrome can hold on to several MB of GPU-side video memory
+  // per dismounted <video>. For a 4-video landing page, this matters
+  // more under HMR than in prod, but we pay it either way.
+  useEffect(() => {
+    return () => {
+      const el = videoRef.current;
+      if (!el) return;
+      try {
+        el.pause();
+        el.removeAttribute('src');
+        while (el.firstChild) el.removeChild(el.firstChild);
+        el.load();
+      } catch {
+        // Element may already be detached; nothing to do.
+      }
+    };
+  }, []);
+
   /**
    * Bird perches on the video frame. Memoised so React doesn't tear the ref
    * down + re-attach on every render — each re-attach fires perchRef(null)

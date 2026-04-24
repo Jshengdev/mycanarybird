@@ -8,7 +8,6 @@ export { CanaryWatchProvider, useCanaryWatch } from './context';
 export { CanaryMascot } from './CanaryMascot';
 export { SessionLog } from './SessionLog';
 export { useCanarySection } from './useCanarySection';
-export { useStatTracker } from './useStatTracker';
 export { BlockedDemoButton } from './BlockedDemoButton';
 export { ComplianceCtaButton } from './ComplianceCtaButton';
 export type {
