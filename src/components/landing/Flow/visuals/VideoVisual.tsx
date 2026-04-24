@@ -14,7 +14,7 @@
  */
 
 import type { ComponentType } from 'react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import type { FlowVisualProps } from '../FlowStep';
 import styles from './VideoVisual.module.css';
@@ -38,11 +38,19 @@ function VideoVisual({ src, perchRef }: VideoVisualProps) {
     }
   }, [reduce]);
 
-  /** Bird perches on the video frame. */
-  const setVideoRef = (el: HTMLVideoElement | null) => {
-    videoRef.current = el;
-    perchRef(el);
-  };
+  /**
+   * Bird perches on the video frame. Memoised so React doesn't tear the ref
+   * down + re-attach on every render — each re-attach fires perchRef(null)
+   * then perchRef(el), which re-registers the canary-watch section and
+   * spins into an infinite update loop.
+   */
+  const setVideoRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      videoRef.current = el;
+      perchRef(el);
+    },
+    [perchRef]
+  );
 
   const mp4Src = src.replace(/\.mov$/, '.mp4');
 
