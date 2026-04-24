@@ -127,6 +127,10 @@ html {
 }
 
 [data-snap] {
+  /* Each snap target fills at least one viewport so the browser never
+     lands the user between ideas. `100svh` uses the small-viewport unit
+     so iOS Safari's dynamic URL bar doesn't cause layout jump. */
+  min-height: 100svh;
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }

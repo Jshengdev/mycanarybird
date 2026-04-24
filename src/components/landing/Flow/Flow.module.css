@@ -1,7 +1,6 @@
 .section {
   position: relative;
   background: var(--bg);
-  padding: var(--space-10) 0 var(--space-12);
 }
 
 .inner {
@@ -10,11 +9,19 @@
   padding: 0 var(--space-8);
 }
 
+/* Section header is its own snap target — a full-viewport "here's the
+   Flow" intro between EcosystemBar and the first FlowStep. Vertically
+   centers its inner copy so the heading reads as a deliberate beat. */
 .sectionHeader {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  padding: var(--space-12) 0;
+}
+.sectionHeaderInner {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
-  margin-bottom: var(--space-10);
   max-width: 640px;
 }
 
@@ -61,13 +68,10 @@
 }
 
 @media (max-width: 768px) {
-  .section {
-    padding: var(--space-12) 0;
-  }
   .inner {
     padding: 0 var(--space-5);
   }
   .sectionHeader {
-    margin-bottom: var(--space-10);
+    padding: var(--space-10) 0;
   }
 }

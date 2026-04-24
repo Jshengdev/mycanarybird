@@ -18,18 +18,20 @@ export function Flow() {
   return (
     <section className={styles.section} id="how-it-works">
       <div className={styles.inner}>
-        <header className={styles.sectionHeader}>
-          <span className={styles.eyebrow}>
-            <span className={styles.eyebrowRule} aria-hidden="true" />
-            HOW CANARY WORKS
-          </span>
-          <h2 className={styles.heading}>
-            One session. Four moves. Every agent safer than the last.
-          </h2>
-          <p className={styles.subheading}>
-            Canary is the trust layer that watches your agent, blocks the
-            action you flagged, and writes rules for what it sees next time.
-          </p>
+        <header className={styles.sectionHeader} data-snap>
+          <div className={styles.sectionHeaderInner}>
+            <span className={styles.eyebrow}>
+              <span className={styles.eyebrowRule} aria-hidden="true" />
+              HOW CANARY WORKS
+            </span>
+            <h2 className={styles.heading}>
+              One session. Four moves. Every agent safer than the last.
+            </h2>
+            <p className={styles.subheading}>
+              Canary is the trust layer that watches your agent, blocks the
+              action you flagged, and writes rules for what it sees next time.
+            </p>
+          </div>
         </header>
 
         <div className={styles.steps}>
