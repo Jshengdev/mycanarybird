@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { LiveIndicator } from '@/components/ui/LiveIndicator';
 import { HeroAsciiGrid } from './HeroAsciiGrid';
+import { HeroOrbit } from './HeroOrbit';
 import { HeroCursor } from './HeroCursor';
 import { staggerParent, staggerChild } from '@/lib/motion';
 import {
@@ -55,6 +56,7 @@ export function Hero() {
       </motion.div>
 
       <HeroAsciiGrid />
+      <HeroOrbit />
 
       <motion.div
         className={styles.content}
@@ -90,6 +92,7 @@ export function Hero() {
             variant="primary"
             size="md"
             asciiVariant="both"
+            plus
             tag="a"
             href="#early-access"
             className={styles.ctaPrimary}
@@ -101,10 +104,11 @@ export function Hero() {
             variant="secondary"
             size="md"
             asciiVariant="right"
+            plus
             tag="a"
             href="#how-it-works"
           >
-            See a live session →
+            See a live session
           </Button>
         </motion.div>
 

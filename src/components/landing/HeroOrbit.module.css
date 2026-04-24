@@ -1,0 +1,65 @@
+.orbit {
+  position: absolute;
+  right: -8%;
+  top: 52%;
+  transform: translateY(-50%);
+  width: clamp(540px, 65vw, 1100px);
+  height: auto;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+  /* Let the rings fade out toward the right edge so they read as part of
+     the paper, not a pasted graphic. */
+  mask-image: radial-gradient(
+    ellipse 85% 70% at 35% 50%,
+    black 50%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 85% 70% at 35% 50%,
+    black 50%,
+    transparent 100%
+  );
+}
+
+.rings ellipse {
+  fill: none;
+  stroke: var(--text-black);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.55;
+}
+
+.diamond {
+  fill: var(--text-black);
+  stroke: var(--text-black);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.node {
+  fill: var(--text-black);
+}
+
+.nodeLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text-black);
+  letter-spacing: 0.06em;
+  dominant-baseline: middle;
+}
+
+@media (max-width: 768px) {
+  .orbit {
+    /* Pull further off-screen on mobile so it doesn't compete with the
+       headline for horizontal space. */
+    right: -40%;
+    width: 130vw;
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No motion to disable — defensive hook so future tweaks stay safe. */
+  .orbit { animation: none; }
+}

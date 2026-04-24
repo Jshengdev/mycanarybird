@@ -12,6 +12,9 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   noAscii?: boolean;
   href?: string;
   tag?: 'button' | 'a';
+  /** Render a leading "+" glyph — wgb.agency editorial pill CTA treatment.
+   *  Silently suppressed when `icon` is provided (caller owns the leading slot). */
+  plus?: boolean;
 }
 
 const variantBg: Record<string, string> = {
@@ -45,17 +48,22 @@ const asciiColorMap: Record<string, string> = {
 };
 
 const sizeStyles: Record<string, { fontSize: number; fontWeight: number; paddingH: number; paddingHPlain: number }> = {
-  sm: { fontSize: 12, fontWeight: 500, paddingH: 24, paddingHPlain: 12 },
-  md: { fontSize: 14, fontWeight: 500, paddingH: 24, paddingHPlain: 12 },
+  /* Pill shape needs more horizontal breathing room than the square variant —
+     the radius eats visual space at both ends. */
+  sm: { fontSize: 12, fontWeight: 500, paddingH: 28, paddingHPlain: 18 },
+  md: { fontSize: 14, fontWeight: 500, paddingH: 32, paddingHPlain: 20 },
 };
 
-const PADDING_V = 6;
+const PADDING_V = 10;
+/** Large enough that a ~40px-tall button reads as a full pill. */
+const PILL_RADIUS = 999;
 
 export function Button({
   variant = 'secondary',
   size = 'md',
   asciiVariant = 'right',
   icon,
+  plus = false,
   noAscii = false,
   disabled = false,
   children,
@@ -122,7 +130,7 @@ export function Button({
     justifyContent: (showAscii && asciiVariant !== 'both') ? 'flex-start' : 'center',
     gap: 'var(--space-1)',
     transition: 'background 100ms ease',
-    borderRadius: 0,
+    borderRadius: PILL_RADIUS,
     textDecoration: 'none',
     boxSizing: 'border-box',
     margin: 0,
@@ -133,10 +141,32 @@ export function Button({
 
   const mergedClassName = `${buttonStyles.btn}${callerClassName ? ` ${callerClassName}` : ''}`;
 
+  const plusGlyph = plus && !icon ? (
+    <span
+      aria-hidden="true"
+      style={{
+        position: 'relative',
+        zIndex: 1,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'var(--font-mono)',
+        fontWeight: 500,
+        fontSize: `${s.fontSize}px`,
+        lineHeight: 1,
+        marginRight: 'var(--space-2)',
+        opacity: 0.8,
+      }}
+    >
+      +
+    </span>
+  ) : null;
+
   const inner = (
     <>
       {showRight && <AsciiStrip side="right" size={blockSize} opacities={opacitiesR} color={asciiColorMap[variant]} />}
       {showLeft && <AsciiStrip side="left" size={blockSize} opacities={opacitiesL} color={asciiColorMap[variant]} />}
+      {plusGlyph}
       {icon && <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center' }}>{icon}</span>}
       {children && <span style={{ position: 'relative', zIndex: 1 }}>{children}</span>}
     </>
