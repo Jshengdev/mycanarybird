@@ -130,6 +130,7 @@ export function FlowStep({
   return (
     <motion.div
       ref={sectionRef}
+      id={sectionId}
       className={classes}
       data-snap
       variants={reduce ? undefined : staggerParent}

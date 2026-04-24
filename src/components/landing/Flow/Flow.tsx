@@ -1,6 +1,7 @@
 'use client';
 
 import { FlowStep } from './FlowStep';
+import { FlowIntroSteps } from './FlowIntroSteps';
 import { InstallVisual } from './visuals/InstallVisual';
 import { SeeVisual } from './visuals/SeeVisual';
 import { StopVisual } from './visuals/StopVisual';
@@ -31,6 +32,7 @@ export function Flow() {
               Canary is the trust layer that watches your agent, blocks the
               action you flagged, and writes rules for what it sees next time.
             </p>
+            <FlowIntroSteps />
           </div>
         </header>
 
@@ -41,11 +43,11 @@ export function Flow() {
             sectionDisplayName="Flow · Install"
             number="01"
             label="Install"
-            headline="Drop in the SDK. Canary starts listening."
-            body="One npm install and one init call. Canary hooks into Claude Code, Browser Use, openClaw, Hermes — or any stack that can POST events."
+            headline="Drop in the SDK. Canary starts watching."
+            body="One npm install, one init call. Canary plugs into Claude Code, Browser Use, openClaw, Hermes — or any stack that can POST an event."
             stat={{
               value: '~5 min',
-              caption: 'From install to first recorded session.',
+              caption: 'Install to first recorded session.',
             }}
             orientation="left"
             Visual={InstallVisual}
@@ -59,11 +61,11 @@ export function Flow() {
             sectionDisplayName="Flow · See"
             number="02"
             label="See"
-            headline="Scroll 12 hours of agent work in 30 seconds."
-            body="Every click, keystroke, and screen state — recorded. Other tools trace what your agent said. Canary shows what it did."
+            headline="Replay 12 hours of agent work in 30 seconds."
+            body="Every click, keystroke, and screen state — captured. Other tools trace what your agent said. Canary shows what it did."
             stat={{
               value: '30s',
-              caption: 'Review 12h of agent work in 30 seconds.',
+              caption: '12 hours of agent work, one scrubbable timeline.',
             }}
             orientation="right"
             Visual={SeeVisual}
@@ -76,18 +78,18 @@ export function Flow() {
             sectionDisplayName="Flow · Stop"
             number="03"
             label="Stop"
-            headline="Write a rule in plain English. Canary blocks the action before it runs."
+            headline="Write a rule in plain English. Canary blocks it before it runs."
             body={
               <>
                 &ldquo;Don&rsquo;t touch admin settings.&rdquo;
                 &ldquo;Don&rsquo;t email new domains.&rdquo; Canary compiles
-                rules like these into policy and enforces them on every action
-                the agent attempts.
+                plain-English rules into policy and enforces them on every
+                action the agent attempts.
               </>
             }
             stat={{
               value: '13/13',
-              caption: 'Violations caught in the ClaimDesk benchmark.',
+              caption: 'Violations caught on the ClaimDesk benchmark.',
             }}
             orientation="left"
             Visual={StopVisual}
@@ -100,11 +102,11 @@ export function Flow() {
             sectionDisplayName="Flow · Learn"
             number="04"
             label="Learn"
-            headline="After every session, Canary writes rules."
-            body="Canary reviews what your agent did and suggests rules that would have prevented any mistake. One click to add — that mistake can't happen again."
+            headline="After every session, Canary writes the next rule."
+            body="Canary reviews what your agent did and drafts rules that would have prevented any mistake. One click to add — and that mistake can't happen again."
             stat={{
               value: '1 click',
-              caption: 'Add a suggested rule. Live before the next session.',
+              caption: 'Suggested rule live before the next session.',
             }}
             orientation="right"
             Visual={LearnVisual}

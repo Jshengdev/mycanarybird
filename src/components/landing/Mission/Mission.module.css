@@ -1,0 +1,147 @@
+/* ============================================================
+   Mission — trust-gap reframe + four pillars.
+
+   Full-viewport snap target. `[data-snap]` global rule already
+   enforces `min-height: 100svh` and snap-align; we flex-center
+   the .inner content vertically so the heading reads as the
+   anchor of the beat.
+   ============================================================ */
+
+.section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: var(--space-12) 0;
+}
+
+/* .inner is positioned so the decorative AsciiMark (corner="top-right")
+   anchors inside this container rather than the viewport. */
+.inner {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ── Eyebrow ─────────────────────────────────────────────── */
+/* Mono caps with a 24px left rule bar — matches the Flow eyebrow. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--icon-grey);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.eyebrowRule {
+  width: 24px;
+  height: 1px;
+  background: var(--icon-grey);
+  display: inline-block;
+}
+
+/* ── Heading ─────────────────────────────────────────────── */
+/* Same typographic family as the Flow section heading. */
+.heading {
+  font-family: var(--font-sans);
+  font-size: clamp(2.125rem, 2.8vw + 0.5rem, 3rem);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  color: var(--text-black);
+  text-wrap: balance;
+  max-width: 22ch;
+}
+
+/* ── Lede paragraph ──────────────────────────────────────── */
+.lede {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--icon-grey);
+  max-width: 60ch;
+}
+
+/* ── Pillars grid ────────────────────────────────────────── */
+/* 4-col desktop → 2-col mid → 1-col mobile. */
+.pillars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-8);
+}
+
+.pillar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--card-bg);
+  border: 1px solid var(--grey-stroke);
+  border-radius: var(--radius-card);
+  padding: var(--space-6);
+  transition: border-color var(--transition-base);
+}
+
+.pillar:hover {
+  border-color: var(--accent-color);
+}
+
+.pillarLabel {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-color);
+}
+
+.pillarBody {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--text-black);
+  margin: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+
+@media (max-width: 959px) {
+  .pillars {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .pillars {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .inner {
+    padding: 0 var(--space-5);
+    gap: var(--space-6);
+  }
+}
+
+/* ── Motion preferences ──────────────────────────────────── */
+/* Globals already zero out transitions under prefers-reduced-motion,
+   but we kill the pillar hover transition explicitly so the spec's
+   contract is self-evident at the component level. */
+@media (prefers-reduced-motion: reduce) {
+  .pillar {
+    transition: none;
+  }
+}

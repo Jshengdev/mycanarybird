@@ -1,7 +1,7 @@
 import { Nav } from "@/components/nav/Nav";
 import { Footer } from "@/components/footer/Footer";
 import { Hero } from "@/components/landing/Hero";
-import { EcosystemBar } from "@/components/landing/EcosystemBar";
+import { Mission } from "@/components/landing/Mission/Mission";
 import { Flow } from "@/components/landing/Flow/Flow";
 import { UseCases } from "@/components/landing/UseCases/UseCases";
 import { Closer } from "@/components/landing/Closer";
@@ -18,7 +18,7 @@ export default function Home() {
       <CanaryMascot />
       <main>
         <Hero />
-        <EcosystemBar />
+        <Mission />
         <Flow />
         <UseCases />
         <Closer />

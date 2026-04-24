@@ -1,0 +1,72 @@
+/**
+ * AsciiMark — decorative 4x4 dither block.
+ *
+ * Grid of 16 cells; lit cells get their background color inline from the
+ * component (so callers can override via the `color` prop). Gaps between
+ * cells create the dot rhythm without needing per-cell padding.
+ *
+ * The mark is always decorative:
+ *  - pointer-events: none — never blocks clicks
+ *  - aria-hidden is set by the component itself
+ *  - no animation (static by design), but we still honor
+ *    prefers-reduced-motion in case a consumer wraps the mark in
+ *    something animated.
+ */
+.root {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 1px;
+  pointer-events: none;
+  user-select: none;
+  /* Keeps the square crisp even when the parent uses fractional layout. */
+  flex-shrink: 0;
+}
+
+.cell {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Unfilled cells stay transparent; filled cells get their color from JS. */
+  background-color: transparent;
+}
+
+/* ── Corner positioning (CSS-only, no JS measurement) ─────────────────── */
+/* Consumers set `corner` and the component picks up these classes. The
+   nearest positioned ancestor provides the reference frame. A small
+   inset keeps the mark clear of rounded borders. */
+
+.cornerTopLeft,
+.cornerTopRight,
+.cornerBottomLeft,
+.cornerBottomRight {
+  position: absolute;
+}
+
+.cornerTopLeft {
+  top: var(--space-4, 12px);
+  left: var(--space-4, 12px);
+}
+
+.cornerTopRight {
+  top: var(--space-4, 12px);
+  right: var(--space-4, 12px);
+}
+
+.cornerBottomLeft {
+  bottom: var(--space-4, 12px);
+  left: var(--space-4, 12px);
+}
+
+.cornerBottomRight {
+  bottom: var(--space-4, 12px);
+  right: var(--space-4, 12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .cell {
+    animation: none;
+    transition: none;
+  }
+}
