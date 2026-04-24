@@ -79,6 +79,11 @@ export function Closer() {
         </motion.div>
 
         <div className={styles.sourceRow}>
+          <span className={styles.sourceEyebrow}>The magic</span>
+          <h3 className={styles.sourceHeadline}>View source code</h3>
+          <p className={styles.sourceBody}>
+            Click below to pull the code for this page.
+          </p>
           <Button
             variant="secondary"
             size="md"
